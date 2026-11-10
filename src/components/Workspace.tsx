@@ -56,7 +56,6 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     setDoc((prev) => ({ ...prev, sheetData: newData }));
   };
 
-  // Full translation handler
   const handleFullTranslate = async (targetLang: string) => {
     setIsTranslatingFull(true);
     try {
@@ -76,7 +75,6 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           alert("Gagal menerjemahkan dokumen.");
         }
       } else {
-        // Translate non-numeric cells in spreadsheet
         const newData = await Promise.all(
           doc.sheetData.map(async (row) => {
             return Promise.all(
@@ -123,76 +121,76 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   const targetExt = isEditOnly ? doc.originalExtension : doc.targetExtension;
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)]">
-      {/* Top Workspace Bar */}
-      <div className="border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
-          {/* File summary & switch back */}
+    <div className="flex flex-col min-h-[calc(100vh-3.5rem)]">
+      {/* Top Workspace Bar Minimalist */}
+      <div className="border-b border-zinc-200/70 bg-white/70 backdrop-blur-md px-4 py-3">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
+          {/* File info & Back action */}
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={onReset}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors cursor-pointer"
             >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span>Ganti Berkas</span>
+              <RotateCcw className="h-3 w-3" />
+              <span>Ganti berkas</span>
             </button>
 
-            <div className="flex items-center gap-2">
-              <span className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-mono font-semibold uppercase text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[11px] font-medium text-zinc-600">
                 .{doc.originalExtension}
               </span>
-              <span className="text-sm font-semibold text-zinc-900 dark:text-white truncate max-w-xs sm:max-w-md">
+              <span className="font-medium text-zinc-900 truncate max-w-xs sm:max-w-md">
                 {doc.name}
               </span>
-              <span className="text-xs text-zinc-400">
+              <span className="text-zinc-400">
                 ({(doc.size / 1024).toFixed(1)} KB)
               </span>
             </div>
           </div>
 
           {/* Mode Switcher & Export CTA */}
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Dual Mode Switch */}
-            <div className="inline-flex rounded-lg border border-zinc-200 bg-zinc-100 p-0.5 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Segmented Mode Switch */}
+            <div className="inline-flex rounded-lg border border-zinc-200/80 bg-zinc-100/60 p-0.5 text-xs">
               <button
                 type="button"
                 onClick={() => setIsEditOnly(false)}
-                className={`rounded-md px-3 py-1 text-xs font-semibold transition-all ${
+                className={`rounded-md px-3 py-1 font-medium transition-all cursor-pointer ${
                   !isEditOnly
-                    ? "bg-white text-indigo-700 shadow-2xs dark:bg-zinc-800 dark:text-indigo-400"
-                    : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+                    ? "bg-white text-zinc-900 shadow-2xs"
+                    : "text-zinc-500 hover:text-zinc-800"
                 }`}
               >
-                Edit & Konversi
+                Edit &amp; Konversi
               </button>
               <button
                 type="button"
                 onClick={() => setIsEditOnly(true)}
-                className={`rounded-md px-3 py-1 text-xs font-semibold transition-all ${
+                className={`rounded-md px-3 py-1 font-medium transition-all cursor-pointer ${
                   isEditOnly
-                    ? "bg-white text-emerald-700 shadow-2xs dark:bg-zinc-800 dark:text-emerald-400"
-                    : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+                    ? "bg-white text-zinc-900 shadow-2xs"
+                    : "text-zinc-500 hover:text-zinc-800"
                 }`}
               >
-                Hanya Edit (Simpan Asli)
+                Hanya Edit
               </button>
             </div>
 
             {/* Target Extension Selector if converting */}
             {!isEditOnly && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-zinc-500">Konversi ke:</span>
+              <div className="flex items-center gap-1 text-xs">
+                <span className="text-zinc-400">ke:</span>
                 <select
                   value={doc.targetExtension}
                   onChange={(e) =>
                     handleTargetChange(e.target.value as SupportedFormat)
                   }
-                  className="rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-zinc-900 shadow-2xs dark:border-zinc-700 dark:bg-zinc-900 dark:text-white focus:outline-hidden"
+                  className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1 font-medium text-zinc-800 text-xs focus:outline-hidden cursor-pointer"
                 >
                   {availableTargets.map((target) => (
                     <option key={target.value} value={target.value}>
-                      .{target.value.toUpperCase()} - {target.label}
+                      .{target.value.toUpperCase()} ({target.label})
                     </option>
                   ))}
                 </select>
@@ -204,23 +202,19 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               type="button"
               disabled={isExporting}
               onClick={handleExport}
-              className={`inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-xs font-bold text-white shadow-sm transition-all ${
-                isEditOnly
-                  ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/20"
-                  : "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20"
-              }`}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3.5 py-1.5 text-xs font-medium text-white hover:bg-zinc-800 disabled:opacity-50 transition-colors cursor-pointer shadow-xs"
             >
               {isExporting ? (
-                <span>Sedang Memproses...</span>
+                <span>Memproses...</span>
               ) : isEditOnly ? (
                 <>
-                  <Download className="h-4 w-4" />
-                  <span>Simpan .{doc.originalExtension.toUpperCase()}</span>
+                  <Download className="h-3.5 w-3.5" />
+                  <span>Simpan .{doc.originalExtension}</span>
                 </>
               ) : (
                 <>
-                  <FileDown className="h-4 w-4" />
-                  <span>Konversi & Unduh .{targetExt.toUpperCase()}</span>
+                  <FileDown className="h-3.5 w-3.5" />
+                  <span>Unduh .{targetExt}</span>
                 </>
               )}
             </button>
@@ -229,36 +223,36 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       </div>
 
       {/* Main Workspace Body */}
-      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col lg:flex-row gap-6 p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col lg:flex-row gap-6 p-4 sm:p-6">
         {/* Editor Main Canvas */}
         <div className="flex-1 flex flex-col">
-          {/* View Tab Selector for PDF (Allows switching between text view and extracted table grid view) */}
+          {/* View Tab Selector for PDF */}
           {doc.originalExtension === "pdf" && (
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xs font-medium text-zinc-500">Tampilan Editor:</span>
+            <div className="flex items-center gap-1 mb-3 text-xs">
+              <span className="text-zinc-400 mr-1">Tampilan:</span>
               <button
                 type="button"
                 onClick={() => setDoc((p) => ({ ...p, mode: "document" }))}
-                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium ${
+                className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition-colors cursor-pointer ${
                   doc.mode === "document"
-                    ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400"
-                    : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                    ? "bg-zinc-100 text-zinc-900"
+                    : "text-zinc-500 hover:text-zinc-800"
                 }`}
               >
-                <FileText className="h-3.5 w-3.5" />
-                <span>Editor Teks & Terjemahan</span>
+                <FileText className="h-3 w-3" />
+                <span>Teks</span>
               </button>
               <button
                 type="button"
                 onClick={() => setDoc((p) => ({ ...p, mode: "spreadsheet" }))}
-                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium ${
+                className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition-colors cursor-pointer ${
                   doc.mode === "spreadsheet"
-                    ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400"
-                    : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                    ? "bg-zinc-100 text-zinc-900"
+                    : "text-zinc-500 hover:text-zinc-800"
                 }`}
               >
-                <FileSpreadsheet className="h-3.5 w-3.5" />
-                <span>Ekstraksi Tabel Excel</span>
+                <FileSpreadsheet className="h-3 w-3" />
+                <span>Tabel Excel</span>
               </button>
             </div>
           )}
@@ -280,67 +274,51 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           )}
         </div>
 
-        {/* Right Inspector & Help Panel */}
-        <div className="w-full lg:w-80 shrink-0 flex flex-col gap-4">
+        {/* Right Inspector & Guide Panel Minimalist */}
+        <div className="w-full lg:w-72 shrink-0 flex flex-col gap-4 text-xs">
           {/* Card: Export Inspector */}
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950 shadow-2xs">
-            <div className="flex items-center gap-2 border-b border-zinc-100 pb-3 dark:border-zinc-800">
-              <Settings2 className="h-4 w-4 text-indigo-500" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-900 dark:text-white">
-                Pengaturan Output
-              </h3>
+          <div className="rounded-xl border border-zinc-200/70 bg-white p-4 shadow-xs">
+            <div className="flex items-center gap-1.5 pb-2.5 border-b border-zinc-100 text-zinc-700 font-medium">
+              <Settings2 className="h-3.5 w-3.5 text-zinc-400" />
+              <span>Detail Ekspor</span>
             </div>
 
-            <div className="mt-3 space-y-3 text-xs">
+            <div className="mt-3 space-y-3 text-[12px]">
               <div>
-                <span className="text-zinc-500">Mode Ekspor:</span>
-                <p className="font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">
+                <span className="text-zinc-400 block">Mode</span>
+                <span className="text-zinc-800 font-medium">
                   {isEditOnly
-                    ? "Hanya Menyunting (Ekstensi Tetap)"
-                    : `Konversi Berkas (.${doc.originalExtension} -> .${targetExt})`}
-                </p>
+                    ? "Hanya Sunting (Format Asli)"
+                    : `Konversi (.${doc.originalExtension} → .${targetExt})`}
+                </span>
               </div>
 
               <div>
-                <span className="text-zinc-500">Nama Berkas Tujuan:</span>
-                <p className="font-mono text-zinc-700 dark:text-zinc-300 break-all mt-0.5 bg-zinc-50 dark:bg-zinc-900 p-1.5 rounded border border-zinc-200 dark:border-zinc-800">
+                <span className="text-zinc-400 block">Nama Berkas</span>
+                <p className="font-mono text-[11px] text-zinc-600 break-all mt-0.5 bg-zinc-50 p-1.5 rounded border border-zinc-100">
                   {doc.name.replace(/\.[^/.]+$/, "")}_edited.{targetExt}
                 </p>
               </div>
 
               <div>
-                <span className="text-zinc-500">Format & Engine:</span>
-                <p className="text-zinc-700 dark:text-zinc-300 mt-0.5">
-                  Client-side WebAssembly + High Fidelity Engine
-                </p>
+                <span className="text-zinc-400 block">Pemrosesan</span>
+                <span className="text-zinc-600">Client-Side WebAssembly</span>
               </div>
             </div>
           </div>
 
           {/* Card: Translation Guide */}
-          <div className="rounded-xl border border-indigo-200/80 bg-indigo-50/50 p-4 dark:border-indigo-900/60 dark:bg-indigo-950/20">
-            <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-semibold text-xs mb-2">
-              <Sparkles className="h-4 w-4" />
-              <span>Fitur Terjemahan Cerdas</span>
+          <div className="rounded-xl border border-zinc-200/70 bg-zinc-50/50 p-4">
+            <div className="flex items-center gap-1.5 text-zinc-700 font-medium mb-2.5">
+              <Sparkles className="h-3.5 w-3.5 text-zinc-500" />
+              <span>Panduan Bahasa</span>
             </div>
-            <ul className="space-y-2 text-xs text-zinc-600 dark:text-zinc-400">
-              <li className="flex items-start gap-1.5">
-                <span className="font-bold text-indigo-600">•</span>
-                <span>
-                  <b>Ubah Beberapa Kata:</b> Cukup sorot (highlight) kata atau kalimat di dokumen, bubble translate akan muncul otomatis.
-                </span>
+            <ul className="space-y-2 text-zinc-500 leading-relaxed text-[11px]">
+              <li>
+                <b>Pilih Kata Tertentu:</b> Sorot teks di editor untuk membuka menu terjemahan kata secara instan.
               </li>
-              <li className="flex items-start gap-1.5">
-                <span className="font-bold text-indigo-600">•</span>
-                <span>
-                  <b>Ubah Seluruhnya:</b> Klik tombol &quot;Terjemahkan Seluruh Dokumen&quot; di bagian atas editor.
-                </span>
-              </li>
-              <li className="flex items-start gap-1.5">
-                <span className="font-bold text-indigo-600">•</span>
-                <span>
-                  <b>Multi-Bahasa:</b> Mendukung Indonesia, Inggris, Jepang, Mandarin, Arab, Spanyol, dan lainnya.
-                </span>
+              <li>
+                <b>Seluruh Dokumen:</b> Gunakan tombol &quot;Terjemahkan Dokumen&quot; di atas untuk seluruh halaman.
               </li>
             </ul>
           </div>

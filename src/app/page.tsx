@@ -10,9 +10,9 @@ export default function Home() {
   const [currentDoc, setCurrentDoc] = useState<LoadedDocument | null>(null);
 
   return (
-    <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-zinc-950 font-sans selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen flex flex-col font-sans selection:bg-zinc-900 selection:text-white">
       <Header currentFileName={currentDoc?.name} />
-      
+
       <main className="flex-1 flex flex-col">
         {!currentDoc ? (
           <DropZone onDocumentLoaded={(doc) => setCurrentDoc(doc)} />
@@ -24,16 +24,16 @@ export default function Home() {
         )}
       </main>
 
-      {/* Modern Minimalist Footer */}
-      <footer className="border-t border-zinc-200 bg-white py-6 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="mx-auto flex max-w-7xl flex-col sm:flex-row items-center justify-between gap-4 px-4 text-xs text-zinc-500 dark:text-zinc-400">
+      {/* Clean Minimalist Footer */}
+      <footer className="border-t border-zinc-100 bg-white/50 py-6 mt-16">
+        <div className="mx-auto flex max-w-6xl flex-col sm:flex-row items-center justify-between gap-3 px-4 text-xs text-zinc-400">
           <div>
-            &copy; 2026 DocMorph Studio. Privacy-first File Editor & Converter.
+            &copy; 2026 DocMorph Studio. In-place editor &amp; multi-format converter.
           </div>
-          <div className="flex items-center gap-4">
-            <span>Client-Side Native Processing</span>
+          <div className="flex items-center gap-3 text-[11px]">
+            <span>Client Native</span>
             <span>•</span>
-            <span>Deployable on Vercel</span>
+            <span>Vercel Edge</span>
           </div>
         </div>
       </footer>

@@ -89,33 +89,33 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
-      {/* Spreadsheet Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 bg-zinc-50/80 px-4 py-2.5 dark:border-zinc-800 dark:bg-zinc-900/60">
-        <div className="flex items-center gap-2">
+    <div className="flex flex-col h-full bg-white rounded-xl border border-zinc-200/80 shadow-xs overflow-hidden">
+      {/* Spreadsheet Minimalist Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 bg-zinc-50/40 px-4 py-2">
+        <div className="flex items-center gap-1.5 text-xs">
           <button
             type="button"
             onClick={addRow}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 shadow-2xs"
+            className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-zinc-700 hover:bg-zinc-50 transition-colors cursor-pointer"
           >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Tambah Baris</span>
+            <Plus className="h-3 w-3 text-zinc-400" />
+            <span>Baris</span>
           </button>
           <button
             type="button"
             onClick={addColumn}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 shadow-2xs"
+            className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-zinc-700 hover:bg-zinc-50 transition-colors cursor-pointer"
           >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Tambah Kolom</span>
+            <Plus className="h-3 w-3 text-zinc-400" />
+            <span>Kolom</span>
           </button>
           {selectedCell && (
             <button
               type="button"
               onClick={deleteCurrentRow}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400"
+              className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50/50 px-2.5 py-1 text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-3 w-3" />
               <span>Hapus Baris #{selectedCell.r + 1}</span>
             </button>
           )}
@@ -124,26 +124,26 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
             <button
               type="button"
               onClick={translateSelectedCell}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-400"
+              className="inline-flex items-center gap-1 rounded-md border border-zinc-300 bg-zinc-100 px-2.5 py-1 text-zinc-800 hover:bg-zinc-200 transition-colors cursor-pointer"
             >
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>Terjemahkan Sel Ini</span>
+              <Sparkles className="h-3 w-3 text-zinc-500" />
+              <span>Ganti Bahasa Sel Ini</span>
             </button>
           )}
         </div>
 
         {/* Translation Controls for Whole Sheet */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1 shadow-2xs">
-            <Globe className="h-3.5 w-3.5 text-indigo-500" />
+          <div className="flex items-center gap-1.5 border border-zinc-200/80 bg-white rounded-lg px-2 py-1 text-xs">
+            <Globe className="h-3 w-3 text-zinc-400" />
             <select
               value={targetLang}
               onChange={(e) => setTargetLang(e.target.value)}
-              className="text-xs bg-transparent border-none focus:outline-hidden text-zinc-700 dark:text-zinc-300"
+              className="bg-transparent border-none focus:outline-hidden text-zinc-700 text-xs cursor-pointer"
             >
               {LANGUAGE_OPTIONS.map((lang) => (
                 <option key={lang.code} value={lang.code}>
-                  {lang.flag} {lang.name}
+                  {lang.name}
                 </option>
               ))}
             </select>
@@ -153,35 +153,35 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
             type="button"
             disabled={isTranslatingFull}
             onClick={() => onFullTranslate(targetLang)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60 transition-all"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-50 hover:border-zinc-300 disabled:opacity-50 transition-all cursor-pointer"
           >
             {isTranslatingFull ? (
               <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                <span>Menerjemahkan Sheet...</span>
+                <Loader2 className="h-3 w-3 animate-spin text-zinc-500" />
+                <span>Menerjemahkan...</span>
               </>
             ) : (
               <>
-                <Sparkles className="h-3.5 w-3.5" />
-                <span>Terjemahkan Seluruh Lembar</span>
+                <Sparkles className="h-3 w-3 text-zinc-500" />
+                <span>Terjemahkan Lembar</span>
               </>
             )}
           </button>
         </div>
       </div>
 
-      {/* Grid Canvas Table */}
-      <div className="flex-1 overflow-auto max-h-[560px]">
+      {/* Grid Canvas Table with Clean Minimalist Hairlines */}
+      <div className="flex-1 overflow-auto max-h-[580px] bg-white">
         <table className="w-full border-collapse text-xs font-mono">
-          <thead className="sticky top-0 z-10 bg-zinc-100 dark:bg-zinc-900 border-b border-zinc-300 dark:border-zinc-700">
+          <thead className="sticky top-0 z-10 border-b border-zinc-200 bg-zinc-50">
             <tr>
-              <th className="w-12 border-r border-zinc-300 dark:border-zinc-700 bg-zinc-200 dark:bg-zinc-800 px-2 py-2 text-center text-zinc-500">
+              <th className="w-12 border-r border-zinc-200 px-2 py-2 text-center font-normal text-zinc-400">
                 #
               </th>
               {Array.from({ length: maxCols }).map((_, colIdx) => (
                 <th
                   key={colIdx}
-                  className="min-w-[140px] border-r border-zinc-300 dark:border-zinc-700 px-3 py-2 text-left font-semibold text-zinc-600 dark:text-zinc-300"
+                  className="min-w-[130px] border-r border-zinc-200 px-3 py-2 text-left font-medium text-zinc-500 uppercase text-[11px]"
                 >
                   {getColLabel(colIdx)}
                 </th>
@@ -194,11 +194,11 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
                 key={rIdx}
                 className={
                   selectedCell?.r === rIdx
-                    ? "bg-indigo-50/40 dark:bg-indigo-950/20"
-                    : "hover:bg-zinc-50/70 dark:hover:bg-zinc-900/40"
+                    ? "bg-zinc-50/70"
+                    : "hover:bg-zinc-50/40"
                 }
               >
-                <td className="sticky left-0 border-r border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900/90 text-center font-medium text-zinc-500 py-1.5">
+                <td className="sticky left-0 border-r border-b border-zinc-200 bg-zinc-50/80 text-center text-zinc-400 py-1.5 text-[11px]">
                   {rIdx + 1}
                 </td>
                 {Array.from({ length: maxCols }).map((_, cIdx) => {
@@ -208,9 +208,9 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
                     <td
                       key={cIdx}
                       onClick={() => setSelectedCell({ r: rIdx, c: cIdx })}
-                      className={`border-r border-b border-zinc-200 dark:border-zinc-800 p-0 transition-colors ${
+                      className={`border-r border-b border-zinc-100 p-0 transition-colors ${
                         isSelected
-                          ? "ring-2 ring-indigo-500 ring-inset bg-indigo-50/60 dark:bg-indigo-950/40"
+                          ? "bg-zinc-100/90 ring-1 ring-zinc-400 ring-inset"
                           : ""
                       }`}
                     >
@@ -218,7 +218,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
                         type="text"
                         value={String(val)}
                         onChange={(e) => handleCellChange(rIdx, cIdx, e.target.value)}
-                        className="w-full h-full px-2.5 py-1.5 bg-transparent border-none text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden font-sans"
+                        className="w-full h-full px-2.5 py-1.5 bg-transparent border-none text-xs text-zinc-900 focus:outline-hidden font-sans"
                       />
                     </td>
                   );
@@ -229,14 +229,14 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
         </table>
       </div>
 
-      {/* Grid Footer */}
-      <div className="flex items-center justify-between border-t border-zinc-200 bg-zinc-50/70 px-4 py-2 text-xs text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400">
-        <div className="flex items-center gap-3">
-          <TableIcon className="h-3.5 w-3.5 text-zinc-400" />
-          <span>{rows.length} Baris × {maxCols} Kolom</span>
+      {/* Grid Minimalist Footer */}
+      <div className="flex items-center justify-between border-t border-zinc-100 bg-zinc-50/30 px-4 py-2 text-[11px] text-zinc-400">
+        <div className="flex items-center gap-2">
+          <TableIcon className="h-3 w-3" />
+          <span>{rows.length} baris × {maxCols} kolom</span>
         </div>
-        <div className="text-[11px] text-zinc-400">
-          Klik sel untuk mengedit langsung atau klik &apos;Terjemahkan Sel Ini&apos;
+        <div>
+          Klik sel untuk mengedit langsung
         </div>
       </div>
     </div>
