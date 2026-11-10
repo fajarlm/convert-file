@@ -13,6 +13,7 @@ import {
   List,
 } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/lib/types";
+import { useAppTheme } from "@/context/ThemeContext";
 
 interface DocumentEditorProps {
   content: string;
@@ -27,6 +28,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
   onFullTranslate,
   isTranslatingFull,
 }) => {
+  const { theme } = useAppTheme();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [selectedText, setSelectedText] = useState("");
   const [selectionRange, setSelectionRange] = useState<{ start: number; end: number } | null>(null);
@@ -93,7 +95,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
     const after = content.substring(selectionRange.end);
     const newContent = before + translatedSelection + after;
     onChange(newContent);
-    // Reset selection bubble
     setSelectedText("");
     setSelectionRange(null);
     setBubblePosition(null);
@@ -119,53 +120,104 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
     onChange(before + prefix + selected + suffix + after);
   };
 
+  const getContainerStyle = () => {
+    switch (theme) {
+      case "retro":
+        return "bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black font-mono text-black";
+      case "brutalist":
+        return "rounded-2xl border-4 border-black bg-white shadow-[6px_6px_0px_#000] text-black";
+      case "minimal":
+        return "rounded-xl border border-zinc-200 bg-white shadow-xs text-zinc-900";
+      case "cyber":
+      default:
+        return "rounded-2xl border border-white/10 bg-[#0B0D16]/90 backdrop-blur-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] text-white";
+    }
+  };
+
+  const getToolbarStyle = () => {
+    switch (theme) {
+      case "retro":
+        return "bg-[#c0c0c0] border-b-2 border-b-zinc-700 px-3 py-2";
+      case "brutalist":
+        return "bg-[#FEF08A] border-b-3 border-black px-4 py-2.5";
+      case "minimal":
+        return "bg-zinc-50/50 border-b border-zinc-100 px-4 py-2 text-zinc-600";
+      case "cyber":
+      default:
+        return "bg-white/[0.02] border-b border-white/[0.07] px-4 py-2.5 text-zinc-300";
+    }
+  };
+
   return (
-    <div className="relative flex flex-col h-full rounded-2xl border border-white/[0.08] bg-[#0B0D16]/90 backdrop-blur-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] overflow-hidden">
-      {/* Editor Dark Frosted Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] bg-white/[0.02] px-4 py-2.5">
-        <div className="flex items-center gap-1.5 text-zinc-400">
+    <div className={`relative flex flex-col h-full overflow-hidden ${getContainerStyle()}`}>
+      {/* Editor Toolbar */}
+      <div className={`flex flex-wrap items-center justify-between gap-3 ${getToolbarStyle()}`}>
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => applyWrapFormat("**")}
-            title="Tebal (Bold)"
-            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+            title="Tebal"
+            className={`flex h-7 w-7 items-center justify-center rounded cursor-pointer ${
+              theme === "retro"
+                ? "bg-[#c0c0c0] border-t border-l border-t-white border-l-white border-b border-r border-b-black border-r-black text-black font-bold active:border-t-black active:border-l-black active:border-b-white active:border-r-white"
+                : theme === "brutalist"
+                ? "border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000]"
+                : "hover:bg-white/10 hover:text-white"
+            }`}
           >
-            <Bold className="h-4 w-4" />
+            <Bold className="h-3.5 w-3.5" />
           </button>
           <button
             type="button"
             onClick={() => applyWrapFormat("*")}
-            title="Miring (Italic)"
-            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+            title="Miring"
+            className={`flex h-7 w-7 items-center justify-center rounded cursor-pointer ${
+              theme === "retro"
+                ? "bg-[#c0c0c0] border-t border-l border-t-white border-l-white border-b border-r border-b-black border-r-black text-black font-bold active:border-t-black active:border-l-black active:border-b-white active:border-r-white"
+                : theme === "brutalist"
+                ? "border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000]"
+                : "hover:bg-white/10 hover:text-white"
+            }`}
           >
-            <Italic className="h-4 w-4" />
+            <Italic className="h-3.5 w-3.5" />
           </button>
           <button
             type="button"
             onClick={() => applyWrapFormat("\n- ")}
             title="Daftar Poin"
-            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+            className={`flex h-7 w-7 items-center justify-center rounded cursor-pointer ${
+              theme === "retro"
+                ? "bg-[#c0c0c0] border-t border-l border-t-white border-l-white border-b border-r border-b-black border-r-black text-black font-bold active:border-t-black active:border-l-black active:border-b-white active:border-r-white"
+                : theme === "brutalist"
+                ? "border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000]"
+                : "hover:bg-white/10 hover:text-white"
+            }`}
           >
-            <List className="h-4 w-4" />
+            <List className="h-3.5 w-3.5" />
           </button>
-          <div className="h-4 w-px bg-white/10 mx-1.5" />
-          <span className="text-xs text-zinc-500 hidden sm:inline">
-            <Type className="inline h-3.5 w-3.5 mr-1 text-cyan-400" />
-            Sorot teks untuk terjemahan kata instan
+          <span className="text-[11px] opacity-60 hidden sm:inline ml-2">
+            <Type className="inline h-3 w-3 mr-1" />
+            Sorot teks untuk terjemah instan
           </span>
         </div>
 
         {/* Full Document Translation Controls */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs text-zinc-300">
-            <Globe className="h-3.5 w-3.5 text-cyan-400" />
+          <div className={`flex items-center gap-1.5 px-2 py-1 text-xs rounded-lg ${
+            theme === "retro"
+              ? "bg-white border-2 border-black text-black"
+              : theme === "brutalist"
+              ? "border-2 border-black bg-white text-black"
+              : "border border-white/10 bg-white/[0.04] text-zinc-300"
+          }`}>
+            <Globe className="h-3.5 w-3.5 opacity-60" />
             <select
               value={fullTargetLang}
               onChange={(e) => setFullTargetLang(e.target.value)}
-              className="bg-transparent border-none focus:outline-hidden text-zinc-200 text-xs cursor-pointer font-sans"
+              className="bg-transparent border-none focus:outline-hidden text-xs cursor-pointer font-sans"
             >
               {LANGUAGE_OPTIONS.map((lang) => (
-                <option key={lang.code} value={lang.code} className="bg-[#0C0E17] text-white">
+                <option key={lang.code} value={lang.code} className="bg-zinc-900 text-white">
                   {lang.flag} {lang.name}
                 </option>
               ))}
@@ -176,7 +228,15 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             type="button"
             disabled={isTranslatingFull}
             onClick={() => onFullTranslate(fullTargetLang)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 px-3.5 py-1.5 text-xs font-semibold text-white shadow-[0_0_20px_-3px_rgba(99,102,241,0.5)] hover:shadow-[0_0_25px_-2px_rgba(99,102,241,0.7)] disabled:opacity-50 transition-all cursor-pointer"
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer ${
+              theme === "retro"
+                ? "bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black text-black font-mono active:border-t-black active:border-l-black active:border-b-white active:border-r-white font-bold"
+                : theme === "brutalist"
+                ? "rounded-xl border-2 border-black bg-[#C084FC] text-black shadow-[2px_2px_0px_#000] font-black"
+                : theme === "minimal"
+                ? "rounded-lg bg-zinc-900 text-white hover:bg-zinc-800"
+                : "rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 text-white shadow-xs"
+            }`}
           >
             {isTranslatingFull ? (
               <>
@@ -185,7 +245,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
               </>
             ) : (
               <>
-                <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
+                <Sparkles className="h-3.5 w-3.5" />
                 <span>Terjemahkan Dokumen</span>
               </>
             )}
@@ -193,7 +253,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
         </div>
       </div>
 
-      {/* Floating Selection Translation Bubble (Glowing Glass) */}
+      {/* Floating Selection Translation Bubble */}
       {bubblePosition && selectedText && (
         <div
           id="translation-bubble"
@@ -202,65 +262,59 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             left: `${bubblePosition.x}px`,
             top: `${bubblePosition.y}px`,
           }}
-          className="z-50 flex flex-col gap-2.5 rounded-2xl border border-indigo-500/40 bg-[#0E101C]/95 p-4 shadow-[0_0_35px_rgba(99,102,241,0.3)] backdrop-blur-2xl w-80 animate-in fade-in zoom-in-95 duration-150"
+          className={`z-50 flex flex-col gap-2 p-3 w-76 animate-in fade-in zoom-in-95 duration-100 ${
+            theme === "retro"
+              ? "bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black font-mono text-black shadow-2xl"
+              : theme === "brutalist"
+              ? "rounded-2xl border-3 border-black bg-[#FFE600] text-black shadow-[6px_6px_0px_#000]"
+              : theme === "minimal"
+              ? "rounded-xl border border-zinc-200 bg-white/95 text-zinc-900 shadow-xl backdrop-blur-md"
+              : "rounded-2xl border border-indigo-500/40 bg-[#0E101C]/95 text-white backdrop-blur-2xl shadow-[0_0_35px_rgba(99,102,241,0.3)]"
+          }`}
         >
-          <div className="flex items-center justify-between border-b border-white/10 pb-2">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-cyan-400">
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>Ganti Bahasa Teks Terpilih</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setBubblePosition(null)}
-              className="text-zinc-500 hover:text-white cursor-pointer"
-            >
+          <div className="flex items-center justify-between border-b border-current/15 pb-1.5">
+            <span className="text-[11px] font-bold uppercase">Ganti Bahasa Teks Terpilih</span>
+            <button onClick={() => setBubblePosition(null)} className="cursor-pointer">
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
 
-          <div className="text-xs font-mono text-zinc-300 bg-white/[0.04] p-2 rounded-lg border border-white/5 max-h-18 overflow-y-auto">
+          <div className="text-xs font-mono bg-black/5 dark:bg-white/5 p-2 rounded border border-current/10 max-h-16 overflow-y-auto">
             &ldquo;{selectedText}&rdquo;
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <select
               value={targetLang}
               onChange={(e) => setTargetLang(e.target.value)}
-              className="w-full text-xs rounded-lg border border-white/10 bg-[#161928] px-2.5 py-1.5 text-zinc-200 focus:outline-hidden cursor-pointer"
+              className="w-full text-xs rounded border border-current/20 bg-white/10 dark:bg-black/20 px-2 py-1 focus:outline-hidden cursor-pointer"
             >
               {LANGUAGE_OPTIONS.map((l) => (
-                <option key={l.code} value={l.code} className="bg-[#121422] text-white">
-                  {l.flag} Ke {l.name}
+                <option key={l.code} value={l.code} className="bg-zinc-900 text-white">
+                  {l.name}
                 </option>
               ))}
             </select>
-
             <button
               type="button"
               disabled={isTranslatingSelection}
               onClick={handleTranslateSelection}
-              className="shrink-0 rounded-lg bg-gradient-to-r from-cyan-500 to-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_0_15px_rgba(6,182,212,0.4)] disabled:opacity-50 cursor-pointer"
+              className="shrink-0 px-3 py-1 text-xs font-bold rounded bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-50 cursor-pointer"
             >
-              {isTranslatingSelection ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                "Ubah"
-              )}
+              {isTranslatingSelection ? <Loader2 className="h-3 w-3 animate-spin" /> : "Ubah"}
             </button>
           </div>
 
           {translatedSelection && (
-            <div className="mt-1 flex flex-col gap-2 rounded-xl bg-emerald-500/10 p-3 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
-              <p className="text-xs text-emerald-300 font-medium">
-                {translatedSelection}
-              </p>
+            <div className="mt-1 flex flex-col gap-1.5 p-2 rounded border border-current/20 bg-emerald-500/10">
+              <p className="text-xs font-semibold">{translatedSelection}</p>
               <button
                 type="button"
                 onClick={applyTranslatedSelection}
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-bold text-black hover:bg-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.5)] cursor-pointer"
+                className="inline-flex items-center justify-center gap-1 py-1 px-2 text-xs font-bold rounded bg-emerald-600 text-white hover:bg-emerald-500 cursor-pointer"
               >
-                <Check className="h-3.5 w-3.5 stroke-[3]" />
-                <span>Ganti Teks Sekarang</span>
+                <Check className="h-3.5 w-3.5" />
+                <span>Terapkan Teks</span>
               </button>
             </div>
           )}
@@ -268,30 +322,25 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
       )}
 
       {/* Main Textarea Canvas */}
-      <div className="relative flex-1 p-8">
+      <div className={`relative flex-1 p-6 ${theme === "retro" ? "bg-white text-black" : ""}`}>
         <textarea
           id="document-textarea"
           ref={textareaRef}
           value={content}
           onChange={(e) => onChange(e.target.value)}
           onSelect={handleSelect}
-          placeholder="Mulai menulis atau menyunting dokumen di sini..."
-          className="w-full h-full min-h-[500px] resize-none border-none bg-transparent font-sans text-sm sm:text-base leading-relaxed text-zinc-200 placeholder:text-zinc-600 focus:outline-hidden focus:ring-0"
+          placeholder="Mulai menulis atau menyunting berkas di sini..."
+          className="w-full h-full min-h-[500px] resize-none border-none bg-transparent font-sans text-sm sm:text-base leading-relaxed focus:outline-hidden focus:ring-0"
         />
       </div>
 
-      {/* Futuristic Document Stats Footer */}
-      <div className="flex items-center justify-between border-t border-white/[0.07] bg-white/[0.02] px-6 py-2.5 text-xs text-zinc-500 font-mono">
-        <div className="flex items-center gap-4">
-          <span>{content.trim() ? content.trim().split(/\s+/).length : 0} WORDS</span>
-          <span>•</span>
-          <span>{content.length} CHARS</span>
-          <span>•</span>
-          <span>{content.split("\n").length} LINES</span>
+      {/* Document Stats Footer */}
+      <div className="flex items-center justify-between border-t border-current/10 px-4 py-2 text-[11px] opacity-70">
+        <div>
+          <span>{content.trim() ? content.trim().split(/\s+/).length : 0} kata</span> •{" "}
+          <span>{content.length} karakter</span>
         </div>
-        <div className="text-zinc-400 hidden sm:inline">
-          Highlight any text to trigger the neural translator
-        </div>
+        <div>Highlight teks untuk membuka opsi ubah bahasa</div>
       </div>
     </div>
   );

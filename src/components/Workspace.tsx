@@ -20,6 +20,7 @@ import {
   Settings2,
   FileDown,
 } from "lucide-react";
+import { useAppTheme } from "@/context/ThemeContext";
 
 interface WorkspaceProps {
   document: LoadedDocument;
@@ -30,6 +31,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   document: initialDoc,
   onReset,
 }) => {
+  const { theme } = useAppTheme();
   const [doc, setDoc] = useState<LoadedDocument>(initialDoc);
   const [isEditOnly, setIsEditOnly] = useState<boolean>(false);
   const [isTranslatingFull, setIsTranslatingFull] = useState<boolean>(false);
@@ -120,31 +122,61 @@ export const Workspace: React.FC<WorkspaceProps> = ({
 
   const targetExt = isEditOnly ? doc.originalExtension : doc.targetExtension;
 
+  // Header styles per theme
+  const getTopBarStyle = () => {
+    switch (theme) {
+      case "retro":
+        return "bg-[#c0c0c0] border-b-2 border-b-black text-black font-mono";
+      case "brutalist":
+        return "bg-white border-b-4 border-black text-black";
+      case "minimal":
+        return "bg-white border-b border-zinc-200 text-zinc-900";
+      case "cyber":
+      default:
+        return "bg-[#07080D]/80 border-b border-white/[0.07] backdrop-blur-xl text-white";
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">
-      {/* Top Workspace Bar (Obsidian Glass) */}
-      <div className="border-b border-white/[0.07] bg-[#07080D]/80 backdrop-blur-xl px-4 py-3.5">
+      {/* Top Workspace Action Bar */}
+      <div className={`px-4 py-3 ${getTopBarStyle()}`}>
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
           {/* File summary & switch back */}
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={onReset}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-white/[0.08] hover:text-white transition-all cursor-pointer shadow-xs"
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer ${
+                theme === "retro"
+                  ? "bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black text-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white"
+                  : theme === "brutalist"
+                  ? "rounded-xl border-2 border-black bg-[#F4F4F5] text-black shadow-[2px_2px_0px_#000] active:translate-x-0.5 active:translate-y-0.5"
+                  : theme === "minimal"
+                  ? "rounded-lg border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+                  : "rounded-xl border border-white/10 bg-white/[0.03] text-zinc-300 hover:bg-white/[0.08]"
+              }`}
             >
-              <RotateCcw className="h-3.5 w-3.5 text-zinc-400" />
+              <RotateCcw className="h-3.5 w-3.5" />
               <span>Ganti Berkas</span>
             </button>
 
             <div className="flex items-center gap-2">
-              <span className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-xs font-mono font-semibold uppercase text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.2)]">
+              <span
+                className={`px-2 py-0.5 text-xs font-mono font-semibold uppercase ${
+                  theme === "retro"
+                    ? "bg-[#000080] text-white"
+                    : theme === "brutalist"
+                    ? "border-2 border-black bg-[#FEF08A] text-black rounded"
+                    : theme === "minimal"
+                    ? "bg-zinc-100 text-zinc-600 rounded"
+                    : "border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 rounded-lg"
+                }`}
+              >
                 .{doc.originalExtension}
               </span>
-              <span className="text-sm font-semibold text-white truncate max-w-xs sm:max-w-md">
+              <span className="text-sm font-bold truncate max-w-xs sm:max-w-md">
                 {doc.name}
-              </span>
-              <span className="text-xs text-zinc-500 font-mono">
-                ({(doc.size / 1024).toFixed(1)} KB)
               </span>
             </div>
           </div>
@@ -152,14 +184,30 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           {/* Mode Switcher & Export CTA */}
           <div className="flex flex-wrap items-center gap-3">
             {/* Dual Mode Switch */}
-            <div className="inline-flex rounded-xl border border-white/10 bg-white/[0.03] p-1 text-xs">
+            <div
+              className={`inline-flex p-1 text-xs ${
+                theme === "retro"
+                  ? "bg-[#d4d0c8] border border-zinc-700"
+                  : theme === "brutalist"
+                  ? "rounded-xl border-2 border-black bg-[#E2E8F0] shadow-[2px_2px_0px_#000]"
+                  : theme === "minimal"
+                  ? "rounded-lg border border-zinc-200 bg-zinc-100/70"
+                  : "rounded-xl border border-white/10 bg-white/[0.03]"
+              }`}
+            >
               <button
                 type="button"
                 onClick={() => setIsEditOnly(false)}
-                className={`rounded-lg px-3.5 py-1.5 font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1 font-semibold transition-all cursor-pointer ${
                   !isEditOnly
-                    ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)]"
-                    : "text-zinc-400 hover:text-white"
+                    ? theme === "retro"
+                      ? "bg-[#000080] text-white"
+                      : theme === "brutalist"
+                      ? "rounded-lg bg-[#FFE600] text-black border-2 border-black"
+                      : theme === "minimal"
+                      ? "rounded-md bg-white text-zinc-900 shadow-2xs"
+                      : "rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-xs"
+                    : "opacity-70 hover:opacity-100"
                 }`}
               >
                 Edit &amp; Konversi
@@ -167,29 +215,43 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               <button
                 type="button"
                 onClick={() => setIsEditOnly(true)}
-                className={`rounded-lg px-3.5 py-1.5 font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1 font-semibold transition-all cursor-pointer ${
                   isEditOnly
-                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]"
-                    : "text-zinc-400 hover:text-white"
+                    ? theme === "retro"
+                      ? "bg-[#000080] text-white"
+                      : theme === "brutalist"
+                      ? "rounded-lg bg-[#4ADE80] text-black border-2 border-black"
+                      : theme === "minimal"
+                      ? "rounded-md bg-white text-zinc-900 shadow-2xs"
+                      : "rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xs"
+                    : "opacity-70 hover:opacity-100"
                 }`}
               >
-                Hanya Edit (Simpan Asli)
+                Hanya Edit
               </button>
             </div>
 
             {/* Target Extension Selector if converting */}
             {!isEditOnly && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-zinc-400 font-mono">Target:</span>
+              <div className="flex items-center gap-1.5 text-xs">
+                <span>Target:</span>
                 <select
                   value={doc.targetExtension}
                   onChange={(e) =>
                     handleTargetChange(e.target.value as SupportedFormat)
                   }
-                  className="rounded-xl border border-white/10 bg-[#121524] px-3 py-1.5 text-xs font-semibold text-cyan-300 focus:outline-hidden cursor-pointer shadow-inner"
+                  className={`px-2.5 py-1 text-xs font-semibold focus:outline-hidden cursor-pointer ${
+                    theme === "retro"
+                      ? "bg-white border-2 border-black text-black"
+                      : theme === "brutalist"
+                      ? "rounded-xl border-2 border-black bg-white text-black shadow-[2px_2px_0px_#000]"
+                      : theme === "minimal"
+                      ? "rounded-lg border border-zinc-200 bg-white text-zinc-800"
+                      : "rounded-xl border border-white/10 bg-[#121524] text-cyan-300"
+                  }`}
                 >
                   {availableTargets.map((target) => (
-                    <option key={target.value} value={target.value} className="bg-[#0C0E17] text-white">
+                    <option key={target.value} value={target.value} className="bg-zinc-900 text-white">
                       .{target.value.toUpperCase()} - {target.label}
                     </option>
                   ))}
@@ -202,23 +264,27 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               type="button"
               disabled={isExporting}
               onClick={handleExport}
-              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
-                isEditOnly
-                  ? "bg-gradient-to-r from-emerald-500 to-teal-400 text-black shadow-[0_0_20px_rgba(16,185,129,0.5)] hover:shadow-[0_0_25px_rgba(16,185,129,0.7)]"
-                  : "bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 text-white shadow-[0_0_25px_-3px_rgba(99,102,241,0.6)] hover:shadow-[0_0_30px_rgba(99,102,241,0.8)]"
+              className={`inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                theme === "retro"
+                  ? "bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black text-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white font-mono"
+                  : theme === "brutalist"
+                  ? "rounded-xl border-3 border-black bg-[#FFE600] text-black shadow-[3px_3px_0px_#000] active:translate-x-0.5 active:translate-y-0.5"
+                  : theme === "minimal"
+                  ? "rounded-lg bg-zinc-900 text-white hover:bg-zinc-800"
+                  : "rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 text-white shadow-[0_0_20px_-3px_rgba(99,102,241,0.5)]"
               }`}
             >
               {isExporting ? (
-                <span>Sedang Memproses...</span>
+                <span>Memproses...</span>
               ) : isEditOnly ? (
                 <>
-                  <Download className="h-4 w-4 stroke-[2.5]" />
+                  <Download className="h-4 w-4" />
                   <span>Simpan .{doc.originalExtension.toUpperCase()}</span>
                 </>
               ) : (
                 <>
-                  <FileDown className="h-4 w-4 stroke-[2.5]" />
-                  <span>Konversi &amp; Unduh .{targetExt.toUpperCase()}</span>
+                  <FileDown className="h-4 w-4" />
+                  <span>Unduh .{targetExt.toUpperCase()}</span>
                 </>
               )}
             </button>
@@ -232,31 +298,35 @@ export const Workspace: React.FC<WorkspaceProps> = ({
         <div className="flex-1 flex flex-col">
           {/* View Tab Selector for PDF */}
           {doc.originalExtension === "pdf" && (
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xs font-medium text-zinc-400">Tampilan Editor:</span>
+            <div className="flex items-center gap-2 mb-3 text-xs">
+              <span className="opacity-60">Tampilan:</span>
               <button
                 type="button"
                 onClick={() => setDoc((p) => ({ ...p, mode: "document" }))}
-                className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-all cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 px-3 py-1 font-semibold rounded cursor-pointer ${
                   doc.mode === "document"
-                    ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.25)]"
-                    : "border-white/5 bg-white/[0.02] text-zinc-400 hover:text-white"
+                    ? theme === "retro"
+                      ? "bg-[#000080] text-white"
+                      : "bg-white/10 border border-current"
+                    : "opacity-60 hover:opacity-100"
                 }`}
               >
                 <FileText className="h-3.5 w-3.5" />
-                <span>Editor Teks &amp; Terjemahan</span>
+                <span>Editor Teks</span>
               </button>
               <button
                 type="button"
                 onClick={() => setDoc((p) => ({ ...p, mode: "spreadsheet" }))}
-                className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-all cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 px-3 py-1 font-semibold rounded cursor-pointer ${
                   doc.mode === "spreadsheet"
-                    ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.25)]"
-                    : "border-white/5 bg-white/[0.02] text-zinc-400 hover:text-white"
+                    ? theme === "retro"
+                      ? "bg-[#000080] text-white"
+                      : "bg-white/10 border border-current"
+                    : "opacity-60 hover:opacity-100"
                 }`}
               >
                 <FileSpreadsheet className="h-3.5 w-3.5" />
-                <span>Ekstraksi Tabel Excel</span>
+                <span>Tabel Excel</span>
               </button>
             </div>
           )}
@@ -278,69 +348,61 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           )}
         </div>
 
-        {/* Right Inspector & Guide Panel (Dark Bento) */}
-        <div className="w-full lg:w-80 shrink-0 flex flex-col gap-5">
-          {/* Card: Export Inspector */}
-          <div className="rounded-2xl border border-white/[0.08] bg-[#0C0E17]/90 p-5 backdrop-blur-xl shadow-lg">
-            <div className="flex items-center gap-2 border-b border-white/10 pb-3">
-              <Settings2 className="h-4 w-4 text-cyan-400" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-white">
-                Status Output
-              </h3>
+        {/* Right Inspector & Guide Panel */}
+        <div className="w-full lg:w-76 shrink-0 flex flex-col gap-4 text-xs">
+          <div
+            className={`p-4 ${
+              theme === "retro"
+                ? "bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black text-black font-mono"
+                : theme === "brutalist"
+                ? "rounded-2xl border-3 border-black bg-white text-black shadow-[4px_4px_0px_#000]"
+                : theme === "minimal"
+                ? "rounded-xl border border-zinc-200 bg-white text-zinc-900 shadow-xs"
+                : "rounded-2xl border border-white/10 bg-[#0C0E17]/90 text-white backdrop-blur-xl"
+            }`}
+          >
+            <div className="flex items-center gap-2 border-b border-current/15 pb-2 font-bold uppercase text-[11px]">
+              <Settings2 className="h-3.5 w-3.5" />
+              <span>Detail Ekspor</span>
             </div>
 
-            <div className="mt-4 space-y-3.5 text-xs">
+            <div className="mt-3 space-y-3">
               <div>
-                <span className="text-zinc-500 block text-[11px] uppercase font-mono">Mode Ekspor</span>
-                <p className="font-semibold text-white mt-0.5">
+                <span className="opacity-60 block text-[10px] uppercase">Mode</span>
+                <p className="font-semibold mt-0.5">
                   {isEditOnly
-                    ? "Sunting Langsung (Format Asli)"
-                    : `Konversi ( .${doc.originalExtension} ➔ .${targetExt} )`}
+                    ? "Hanya Sunting (Format Asli)"
+                    : `Konversi (.${doc.originalExtension} ➔ .${targetExt})`}
                 </p>
               </div>
 
               <div>
-                <span className="text-zinc-500 block text-[11px] uppercase font-mono">Nama Berkas Tujuan</span>
-                <p className="font-mono text-zinc-300 break-all mt-1 bg-white/[0.03] p-2 rounded-lg border border-white/5 text-[11px]">
+                <span className="opacity-60 block text-[10px] uppercase">Nama Berkas</span>
+                <p className="font-mono text-[11px] break-all mt-1 p-1.5 border border-current/15 rounded bg-black/5">
                   {doc.name.replace(/\.[^/.]+$/, "")}_edited.{targetExt}
-                </p>
-              </div>
-
-              <div>
-                <span className="text-zinc-500 block text-[11px] uppercase font-mono">Engine Komputasi</span>
-                <p className="text-emerald-400 font-medium mt-0.5 flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Client WASM + High Fidelity
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Card: Translation Guide */}
-          <div className="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-950/20 to-indigo-950/20 p-5 backdrop-blur-xl shadow-lg">
-            <div className="flex items-center gap-2 text-violet-300 font-bold text-xs uppercase mb-3 border-b border-violet-500/20 pb-2.5">
-              <Sparkles className="h-4 w-4 text-cyan-400" />
-              <span>Panduan Terjemahan AI</span>
+          <div
+            className={`p-4 ${
+              theme === "retro"
+                ? "bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black text-black font-mono"
+                : theme === "brutalist"
+                ? "rounded-2xl border-3 border-black bg-[#EDE9FE] text-black shadow-[4px_4px_0px_#000]"
+                : theme === "minimal"
+                ? "rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-800"
+                : "rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-950/20 to-indigo-950/20 text-zinc-300"
+            }`}
+          >
+            <div className="flex items-center gap-1.5 font-bold text-xs uppercase mb-2">
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>Terjemahan Cerdas</span>
             </div>
-            <ul className="space-y-3 text-xs text-zinc-300 leading-relaxed">
-              <li className="flex items-start gap-2">
-                <span className="h-4 w-4 rounded-full bg-violet-500/30 text-violet-300 flex items-center justify-center text-[10px] shrink-0 font-bold">1</span>
-                <span>
-                  <b>Ubah Beberapa Kata:</b> Cukup sorot teks dokumen dengan kursor mouse, bubble translasi neural akan muncul seketika.
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="h-4 w-4 rounded-full bg-violet-500/30 text-violet-300 flex items-center justify-center text-[10px] shrink-0 font-bold">2</span>
-                <span>
-                  <b>Ubah Seluruh Dokumen:</b> Klik tombol &quot;Terjemahkan Dokumen&quot; di atas untuk menerjemahkan seluruh halaman.
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="h-4 w-4 rounded-full bg-violet-500/30 text-violet-300 flex items-center justify-center text-[10px] shrink-0 font-bold">3</span>
-                <span>
-                  <b>Multi-Bahasa:</b> Mendukung Indonesia, Inggris, Jepang, Mandarin, Arab, Jerman, dan lainnya.
-                </span>
-              </li>
+            <ul className="space-y-2 text-[11px] opacity-80 leading-relaxed">
+              <li>• <b>Pilih Kata:</b> Sorot teks di dokumen untuk menerjemahkan kata tertentu.</li>
+              <li>• <b>Semua Dokumen:</b> Gunakan tombol di atas untuk menerjemahkan seluruh halaman.</li>
             </ul>
           </div>
         </div>

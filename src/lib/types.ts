@@ -34,6 +34,47 @@ export interface TargetOption {
   iconName: string;
 }
 
+export type AppTheme = "cyber" | "brutalist" | "minimal" | "retro";
+
+export interface ThemeOption {
+  id: AppTheme;
+  name: string;
+  icon: string;
+  badge: string;
+  description: string;
+}
+
+export const THEME_OPTIONS: ThemeOption[] = [
+  {
+    id: "cyber",
+    name: "Dark Aurora Glass",
+    icon: "🌌",
+    badge: "Futuristic",
+    description: "Obsidian space, neon glow & frosted glass",
+  },
+  {
+    id: "brutalist",
+    name: "Neo-Brutalism",
+    icon: "⚡",
+    badge: "Pop-Art",
+    description: "Border hitam 3D, bayangan solid & warna pop",
+  },
+  {
+    id: "minimal",
+    name: "Pure Minimalist",
+    icon: "🕊️",
+    badge: "Zen",
+    description: "Putih susu, tenang tanpa distraksi visual",
+  },
+  {
+    id: "retro",
+    name: "Retro Windows 98",
+    icon: "💾",
+    badge: "Nostalgia 90s",
+    description: "Teal desktop, 3D bevels & classic window chrome",
+  },
+];
+
 export const LANGUAGE_OPTIONS = [
   { code: "id", name: "Indonesian (Bahasa Indonesia)", flag: "🇮🇩" },
   { code: "en", name: "English", flag: "🇬🇧" },

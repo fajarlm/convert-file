@@ -10,6 +10,7 @@ import {
   Table as TableIcon,
 } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/lib/types";
+import { useAppTheme } from "@/context/ThemeContext";
 
 interface SpreadsheetEditorProps {
   data: (string | number)[][];
@@ -24,6 +25,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
   onFullTranslate,
   isTranslatingFull,
 }) => {
+  const { theme } = useAppTheme();
   const [selectedCell, setSelectedCell] = useState<{ r: number; c: number } | null>(null);
   const [targetLang, setTargetLang] = useState("en");
 
@@ -88,32 +90,58 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
     }
   };
 
+  const getContainerStyle = () => {
+    switch (theme) {
+      case "retro":
+        return "bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black font-mono text-black";
+      case "brutalist":
+        return "rounded-2xl border-4 border-black bg-white shadow-[6px_6px_0px_#000] text-black";
+      case "minimal":
+        return "rounded-xl border border-zinc-200 bg-white shadow-xs text-zinc-900";
+      case "cyber":
+      default:
+        return "rounded-2xl border border-white/10 bg-[#0B0D16]/90 backdrop-blur-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] text-white";
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full rounded-2xl border border-white/[0.08] bg-[#0B0D16]/90 backdrop-blur-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] overflow-hidden">
-      {/* Spreadsheet Dark Frosted Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] bg-white/[0.02] px-4 py-2.5">
+    <div className={`flex flex-col h-full overflow-hidden ${getContainerStyle()}`}>
+      {/* Spreadsheet Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-current/15 px-4 py-2.5">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={addRow}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-white/[0.08] hover:text-white transition-all cursor-pointer"
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer ${
+              theme === "retro"
+                ? "bg-[#c0c0c0] border-t border-l border-t-white border-l-white border-b border-r border-b-black border-r-black text-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white font-bold"
+                : theme === "brutalist"
+                ? "rounded-lg border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000]"
+                : "rounded-lg border border-current/20 hover:bg-current/5"
+            }`}
           >
-            <Plus className="h-3.5 w-3.5 text-cyan-400" />
+            <Plus className="h-3.5 w-3.5" />
             <span>Tambah Baris</span>
           </button>
           <button
             type="button"
             onClick={addColumn}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-white/[0.08] hover:text-white transition-all cursor-pointer"
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer ${
+              theme === "retro"
+                ? "bg-[#c0c0c0] border-t border-l border-t-white border-l-white border-b border-r border-b-black border-r-black text-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white font-bold"
+                : theme === "brutalist"
+                ? "rounded-lg border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000]"
+                : "rounded-lg border border-current/20 hover:bg-current/5"
+            }`}
           >
-            <Plus className="h-3.5 w-3.5 text-cyan-400" />
+            <Plus className="h-3.5 w-3.5" />
             <span>Tambah Kolom</span>
           </button>
           {selectedCell && (
             <button
               type="button"
               onClick={deleteCurrentRow}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-300 hover:bg-rose-500/20 transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-rose-500 rounded border border-rose-500/30 bg-rose-500/10 cursor-pointer"
             >
               <Trash2 className="h-3.5 w-3.5" />
               <span>Hapus Baris #{selectedCell.r + 1}</span>
@@ -124,9 +152,9 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
             <button
               type="button"
               onClick={translateSelectedCell}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-300 hover:bg-violet-500/20 shadow-[0_0_12px_rgba(168,85,247,0.3)] transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-violet-400 rounded border border-violet-500/30 bg-violet-500/10 cursor-pointer"
             >
-              <Sparkles className="h-3.5 w-3.5 text-violet-400" />
+              <Sparkles className="h-3.5 w-3.5" />
               <span>Ganti Bahasa Sel Ini</span>
             </button>
           )}
@@ -134,15 +162,15 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
 
         {/* Translation Controls for Whole Sheet */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs text-zinc-300">
-            <Globe className="h-3.5 w-3.5 text-cyan-400" />
+          <div className="flex items-center gap-1.5 border border-current/20 px-2 py-1 text-xs rounded">
+            <Globe className="h-3.5 w-3.5 opacity-60" />
             <select
               value={targetLang}
               onChange={(e) => setTargetLang(e.target.value)}
-              className="bg-transparent border-none focus:outline-hidden text-zinc-200 text-xs cursor-pointer font-sans"
+              className="bg-transparent border-none focus:outline-hidden text-xs cursor-pointer font-sans"
             >
               {LANGUAGE_OPTIONS.map((lang) => (
-                <option key={lang.code} value={lang.code} className="bg-[#0C0E17] text-white">
+                <option key={lang.code} value={lang.code} className="bg-zinc-900 text-white">
                   {lang.flag} {lang.name}
                 </option>
               ))}
@@ -153,7 +181,15 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
             type="button"
             disabled={isTranslatingFull}
             onClick={() => onFullTranslate(targetLang)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 px-3.5 py-1.5 text-xs font-semibold text-white shadow-[0_0_20px_-3px_rgba(99,102,241,0.5)] hover:shadow-[0_0_25px_-2px_rgba(99,102,241,0.7)] disabled:opacity-50 transition-all cursor-pointer"
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer ${
+              theme === "retro"
+                ? "bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black text-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white font-bold"
+                : theme === "brutalist"
+                ? "rounded-xl border-2 border-black bg-[#C084FC] text-black shadow-[2px_2px_0px_#000] font-black"
+                : theme === "minimal"
+                ? "rounded-lg bg-zinc-900 text-white hover:bg-zinc-800"
+                : "rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 text-white shadow-xs"
+            }`}
           >
             {isTranslatingFull ? (
               <>
@@ -162,7 +198,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
               </>
             ) : (
               <>
-                <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
+                <Sparkles className="h-3.5 w-3.5" />
                 <span>Terjemahkan Seluruh Lembar</span>
               </>
             )}
@@ -170,18 +206,16 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
         </div>
       </div>
 
-      {/* Cyber Grid Canvas Table */}
-      <div className="flex-1 overflow-auto max-h-[580px] bg-[#070911]">
+      {/* Grid Canvas Table */}
+      <div className={`flex-1 overflow-auto max-h-[580px] ${theme === "retro" ? "bg-white text-black" : ""}`}>
         <table className="w-full border-collapse text-xs font-mono">
-          <thead className="sticky top-0 z-10 border-b border-white/10 bg-[#0F111D]">
+          <thead className="sticky top-0 z-10 border-b border-current/20 bg-black/5 dark:bg-white/5">
             <tr>
-              <th className="w-12 border-r border-white/10 px-2 py-2 text-center text-zinc-500 font-medium">
-                #
-              </th>
+              <th className="w-12 border-r border-current/20 px-2 py-2 text-center opacity-60">#</th>
               {Array.from({ length: maxCols }).map((_, colIdx) => (
                 <th
                   key={colIdx}
-                  className="min-w-[140px] border-r border-white/10 px-3 py-2 text-left font-semibold text-cyan-300 uppercase tracking-wider text-[11px]"
+                  className="min-w-[140px] border-r border-current/20 px-3 py-2 text-left font-bold opacity-80 uppercase"
                 >
                   {getColLabel(colIdx)}
                 </th>
@@ -190,15 +224,8 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
           </thead>
           <tbody>
             {rows.map((row, rIdx) => (
-              <tr
-                key={rIdx}
-                className={
-                  selectedCell?.r === rIdx
-                    ? "bg-indigo-950/20"
-                    : "hover:bg-white/[0.02]"
-                }
-              >
-                <td className="sticky left-0 border-r border-b border-white/10 bg-[#0C0E18] text-center text-zinc-500 font-mono py-1.5 text-[11px]">
+              <tr key={rIdx} className="hover:bg-current/5">
+                <td className="sticky left-0 border-r border-b border-current/15 bg-black/5 dark:bg-zinc-900 text-center opacity-60 py-1.5">
                   {rIdx + 1}
                 </td>
                 {Array.from({ length: maxCols }).map((_, cIdx) => {
@@ -208,9 +235,9 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
                     <td
                       key={cIdx}
                       onClick={() => setSelectedCell({ r: rIdx, c: cIdx })}
-                      className={`border-r border-b border-white/[0.06] p-0 transition-colors ${
+                      className={`border-r border-b border-current/15 p-0 transition-colors ${
                         isSelected
-                          ? "bg-cyan-500/10 ring-2 ring-cyan-400/80 ring-inset shadow-[0_0_15px_rgba(6,182,212,0.3)]"
+                          ? "bg-cyan-500/20 ring-2 ring-cyan-400 ring-inset"
                           : ""
                       }`}
                     >
@@ -218,7 +245,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
                         type="text"
                         value={String(val)}
                         onChange={(e) => handleCellChange(rIdx, cIdx, e.target.value)}
-                        className="w-full h-full px-3 py-2 bg-transparent border-none text-xs text-zinc-200 focus:outline-hidden font-sans"
+                        className="w-full h-full px-3 py-2 bg-transparent border-none text-xs focus:outline-hidden font-sans"
                       />
                     </td>
                   );
@@ -229,15 +256,13 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
         </table>
       </div>
 
-      {/* Grid Futuristic Footer */}
-      <div className="flex items-center justify-between border-t border-white/[0.07] bg-white/[0.02] px-4 py-2.5 text-xs text-zinc-500 font-mono">
-        <div className="flex items-center gap-2 text-zinc-400">
-          <TableIcon className="h-3.5 w-3.5 text-cyan-400" />
-          <span>{rows.length} ROWS × {maxCols} COLS</span>
+      {/* Grid Footer */}
+      <div className="flex items-center justify-between border-t border-current/15 px-4 py-2 text-xs opacity-70">
+        <div className="flex items-center gap-2">
+          <TableIcon className="h-3.5 w-3.5" />
+          <span>{rows.length} Baris × {maxCols} Kolom</span>
         </div>
-        <div>
-          Click any cell to edit • Select cell to translate
-        </div>
+        <div>Klik sel untuk mengedit langsung</div>
       </div>
     </div>
   );
