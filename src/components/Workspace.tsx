@@ -21,6 +21,7 @@ import {
   FileDown,
 } from "lucide-react";
 import { useAppTheme } from "@/context/ThemeContext";
+import { translateDocument, translateBatch } from "@/lib/translator";
 
 interface WorkspaceProps {
   document: LoadedDocument;
@@ -62,46 +63,40 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     setIsTranslatingFull(true);
     try {
       if (doc.mode === "document") {
-        const res = await fetch("/api/translate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: doc.contentText,
-            targetLang,
-          }),
-        });
-        const data = await res.json();
-        if (data.translatedText) {
-          handleDocumentTextChange(data.translatedText);
+        const translated = await translateDocument(doc.contentText, targetLang);
+        if (translated) {
+          handleDocumentTextChange(translated);
         } else {
           alert("Gagal menerjemahkan dokumen.");
         }
       } else {
-        const newData = await Promise.all(
-          doc.sheetData.map(async (row) => {
-            return Promise.all(
-              row.map(async (cell) => {
-                const str = String(cell ?? "").trim();
-                if (!str || !isNaN(Number(str))) return cell;
-                try {
-                  const res = await fetch("/api/translate", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ text: str, targetLang }),
-                  });
-                  const d = await res.json();
-                  return d.translatedText || cell;
-                } catch {
-                  return cell;
-                }
-              })
-            );
-          })
-        );
-        handleSpreadsheetChange(newData);
+        // Flatten non-empty text cells, batch translate in chunks
+        const flatIndices: { r: number; c: number; text: string }[] = [];
+        const flatTexts: string[] = [];
+
+        doc.sheetData.forEach((row, rIdx) => {
+          row.forEach((cell, cIdx) => {
+            const str = String(cell ?? "").trim();
+            if (str && isNaN(Number(str))) {
+              flatIndices.push({ r: rIdx, c: cIdx, text: str });
+              flatTexts.push(str);
+            }
+          });
+        });
+
+        if (flatTexts.length > 0) {
+          const translatedList = await translateBatch(flatTexts, targetLang);
+          const newData = doc.sheetData.map((row) => [...row]);
+          flatIndices.forEach((pos, idx) => {
+            if (translatedList[idx]) {
+              newData[pos.r][pos.c] = translatedList[idx];
+            }
+          });
+          handleSpreadsheetChange(newData);
+        }
       }
     } catch (err) {
-      console.error(err);
+      console.error("Translation error in workspace:", err);
       alert("Terjadi kendala saat menerjemahkan.");
     } finally {
       setIsTranslatingFull(false);
@@ -149,50 +144,50 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               onClick={onReset}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer ${
                 theme === "retro"
-                  ? "bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black text-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white"
+                  ? "bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black text-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white font-mono"
                   : theme === "brutalist"
-                  ? "rounded-xl border-2 border-black bg-[#F4F4F5] text-black shadow-[2px_2px_0px_#000] active:translate-x-0.5 active:translate-y-0.5"
+                  ? "rounded-xl border-2 border-black bg-white text-black shadow-[2px_2px_0px_#000] hover:bg-zinc-100"
                   : theme === "minimal"
                   ? "rounded-lg border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
-                  : "rounded-xl border border-white/10 bg-white/[0.03] text-zinc-300 hover:bg-white/[0.08]"
+                  : "rounded-xl border border-white/10 bg-white/[0.04] text-zinc-300 hover:bg-white/[0.08]"
               }`}
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              <span>Ganti Berkas</span>
+              <span>Ganti File</span>
             </button>
 
             <div className="flex items-center gap-2">
+              <span className="font-bold text-xs truncate max-w-[200px] sm:max-w-xs">
+                {doc.name}
+              </span>
               <span
-                className={`px-2 py-0.5 text-xs font-mono font-semibold uppercase ${
+                className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
                   theme === "retro"
-                    ? "bg-[#000080] text-white"
+                    ? "bg-black text-white"
                     : theme === "brutalist"
-                    ? "border-2 border-black bg-[#FEF08A] text-black rounded"
+                    ? "border border-black bg-[#FFE600] text-black font-black"
                     : theme === "minimal"
-                    ? "bg-zinc-100 text-zinc-600 rounded"
-                    : "border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 rounded-lg"
+                    ? "bg-zinc-100 text-zinc-700"
+                    : "bg-cyan-500/10 text-cyan-400 border border-cyan-500/30"
                 }`}
               >
                 .{doc.originalExtension}
               </span>
-              <span className="text-sm font-bold truncate max-w-xs sm:max-w-md">
-                {doc.name}
-              </span>
             </div>
           </div>
 
-          {/* Mode Switcher & Export CTA */}
+          {/* Mode Switch & Export Target Controls */}
           <div className="flex flex-wrap items-center gap-3">
-            {/* Dual Mode Switch */}
+            {/* Mode switch: Edit Only vs Convert */}
             <div
-              className={`inline-flex p-1 text-xs ${
+              className={`flex items-center p-0.5 text-xs rounded-xl ${
                 theme === "retro"
-                  ? "bg-[#d4d0c8] border border-zinc-700"
+                  ? "bg-white border-2 border-black"
                   : theme === "brutalist"
-                  ? "rounded-xl border-2 border-black bg-[#E2E8F0] shadow-[2px_2px_0px_#000]"
+                  ? "border-2 border-black bg-white shadow-[2px_2px_0px_#000]"
                   : theme === "minimal"
-                  ? "rounded-lg border border-zinc-200 bg-zinc-100/70"
-                  : "rounded-xl border border-white/10 bg-white/[0.03]"
+                  ? "bg-zinc-100 p-1 rounded-lg"
+                  : "bg-white/[0.04] border border-white/10"
               }`}
             >
               <button
@@ -377,7 +372,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
               </div>
 
               <div>
-                <span className="opacity-60 block text-[10px] uppercase">Nama Berkas</span>
+                <span className="opacity-60 block text-[10px] uppercase">Nama Berkas Hasil</span>
                 <p className="font-mono text-[11px] break-all mt-1 p-1.5 border border-current/15 rounded bg-black/5">
                   {doc.name.replace(/\.[^/.]+$/, "")}_edited.{targetExt}
                 </p>
@@ -398,11 +393,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           >
             <div className="flex items-center gap-1.5 font-bold text-xs uppercase mb-2">
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Terjemahan Cerdas</span>
+              <span>Fitur Terjemahan</span>
             </div>
             <ul className="space-y-2 text-[11px] opacity-80 leading-relaxed">
-              <li>• <b>Pilih Kata:</b> Sorot teks di dokumen untuk menerjemahkan kata tertentu.</li>
-              <li>• <b>Semua Dokumen:</b> Gunakan tombol di atas untuk menerjemahkan seluruh halaman.</li>
+              <li>• <b>Pilih Kata / Kalimat:</b> Sorot teks pada dokumen, popup terjemah akan muncul otomatis untuk mengubah kata atau kalimat yang disorot saja.</li>
+              <li>• <b>Semua Dokumen:</b> Klik tombol &ldquo;Terjemahkan Dokumen&rdquo; di kanan atas toolbar untuk menerjemahkan seluruh isi berkas.</li>
+              <li>• <b>Tabel &amp; Spreadsheet:</b> Klik sel tertentu untuk menerjemahkan sel itu saja, atau terjemahkan satu kolom utuh secara instan.</li>
             </ul>
           </div>
         </div>

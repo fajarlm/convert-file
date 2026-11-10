@@ -8,9 +8,11 @@ import {
   Sparkles,
   Loader2,
   Table as TableIcon,
+  Columns3,
 } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/lib/types";
 import { useAppTheme } from "@/context/ThemeContext";
+import { translateText, translateBatch } from "@/lib/translator";
 
 interface SpreadsheetEditorProps {
   data: (string | number)[][];
@@ -28,6 +30,8 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
   const { theme } = useAppTheme();
   const [selectedCell, setSelectedCell] = useState<{ r: number; c: number } | null>(null);
   const [targetLang, setTargetLang] = useState("en");
+  const [isTranslatingCell, setIsTranslatingCell] = useState(false);
+  const [isTranslatingCol, setIsTranslatingCol] = useState(false);
 
   const rows = data.length > 0 ? data : [[""]];
   const maxCols = Math.max(...rows.map((r) => r.length), 1);
@@ -74,19 +78,39 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
     const currentVal = String(rows[selectedCell.r]?.[selectedCell.c] ?? "");
     if (!currentVal.trim()) return;
 
+    setIsTranslatingCell(true);
     try {
-      const res = await fetch("/api/translate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: currentVal, targetLang }),
-      });
-      const resData = await res.json();
-      if (resData.translatedText) {
-        handleCellChange(selectedCell.r, selectedCell.c, resData.translatedText);
+      const translated = await translateText(currentVal, targetLang);
+      if (translated) {
+        handleCellChange(selectedCell.r, selectedCell.c, translated);
       }
     } catch (err) {
       console.error(err);
       alert("Gagal menerjemahkan sel.");
+    } finally {
+      setIsTranslatingCell(false);
+    }
+  };
+
+  const translateCurrentColumn = async () => {
+    if (!selectedCell) return;
+    const colIdx = selectedCell.c;
+    setIsTranslatingCol(true);
+    try {
+      const colTexts = rows.map((r) => String(r[colIdx] ?? ""));
+      const translatedCol = await translateBatch(colTexts, targetLang);
+
+      const newData = rows.map((row, rIdx) => {
+        const newRow = [...row];
+        newRow[colIdx] = translatedCol[rIdx] ?? newRow[colIdx];
+        return newRow;
+      });
+      onChange(newData);
+    } catch (err) {
+      console.error(err);
+      alert("Gagal menerjemahkan kolom.");
+    } finally {
+      setIsTranslatingCol(false);
     }
   };
 
@@ -108,7 +132,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
     <div className={`flex flex-col h-full overflow-hidden ${getContainerStyle()}`}>
       {/* Spreadsheet Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-current/15 px-4 py-2.5">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={addRow}
@@ -137,26 +161,46 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
             <Plus className="h-3.5 w-3.5" />
             <span>Tambah Kolom</span>
           </button>
-          {selectedCell && (
-            <button
-              type="button"
-              onClick={deleteCurrentRow}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-rose-500 rounded border border-rose-500/30 bg-rose-500/10 cursor-pointer"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              <span>Hapus Baris #{selectedCell.r + 1}</span>
-            </button>
-          )}
 
           {selectedCell && (
-            <button
-              type="button"
-              onClick={translateSelectedCell}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-violet-400 rounded border border-violet-500/30 bg-violet-500/10 cursor-pointer"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>Ganti Bahasa Sel Ini</span>
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={deleteCurrentRow}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-rose-500 rounded border border-rose-500/30 bg-rose-500/10 cursor-pointer"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Hapus Baris #{selectedCell.r + 1}</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={isTranslatingCell}
+                onClick={translateSelectedCell}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-cyan-400 rounded-lg border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 cursor-pointer"
+              >
+                {isTranslatingCell ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                <span>Terjemahkan Sel Ini</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={isTranslatingCol}
+                onClick={translateCurrentColumn}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-400 rounded-lg border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 cursor-pointer"
+              >
+                {isTranslatingCol ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Columns3 className="h-3.5 w-3.5" />
+                )}
+                <span>Terjemahkan Kolom {getColLabel(selectedCell.c)}</span>
+              </button>
+            </>
           )}
         </div>
 
@@ -194,7 +238,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
             {isTranslatingFull ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                <span>Menerjemahkan Lembar...</span>
+                <span>Menerjemahkan Semua Sel...</span>
               </>
             ) : (
               <>
@@ -262,7 +306,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
           <TableIcon className="h-3.5 w-3.5" />
           <span>{rows.length} Baris × {maxCols} Kolom</span>
         </div>
-        <div>Klik sel untuk mengedit langsung</div>
+        <div>Klik sel mana saja untuk mengedit, menerjemahkan sel, atau menerjemahkan seluruh kolom</div>
       </div>
     </div>
   );

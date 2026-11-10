@@ -37,6 +37,7 @@ export function getAvailableTargets(ext: SupportedFormat): TargetOption[] {
         { value: "xlsx", label: "Excel Spreadsheet (.xlsx)", description: "Ekstrak tabel & baris data ke Excel", iconName: "Sheet" },
         { value: "docx", label: "Word Document (.docx)", description: "Konversi ke format dokumen Word", iconName: "FileText" },
         { value: "txt", label: "Plain Text (.txt)", description: "Ekstrak seluruh teks bersih", iconName: "File" },
+        { value: "html", label: "HTML Webpage (.html)", description: "Format dokumen web", iconName: "Code" },
         { value: "pdf", label: "PDF Document (.pdf)", description: "Simpan perubahan kembali ke PDF", iconName: "FileCheck" },
       ];
     case "docx":
@@ -44,6 +45,7 @@ export function getAvailableTargets(ext: SupportedFormat): TargetOption[] {
         { value: "pdf", label: "PDF Document (.pdf)", description: "Format dokumen siap cetak", iconName: "FileCheck" },
         { value: "txt", label: "Plain Text (.txt)", description: "Teks murni tanpa styling", iconName: "File" },
         { value: "html", label: "HTML Webpage (.html)", description: "Format halaman web", iconName: "Code" },
+        { value: "xlsx", label: "Excel Spreadsheet (.xlsx)", description: "Konversi baris ke Excel", iconName: "Sheet" },
         { value: "docx", label: "Word Document (.docx)", description: "Simpan kembali sebagai Word", iconName: "FileText" },
       ];
     case "xlsx":
@@ -52,6 +54,8 @@ export function getAvailableTargets(ext: SupportedFormat): TargetOption[] {
         { value: "pdf", label: "PDF Document (.pdf)", description: "Cetak tabel ke dokumen PDF", iconName: "FileCheck" },
         { value: "csv", label: "CSV File (.csv)", description: "Format data terpisah koma", iconName: "Table" },
         { value: "json", label: "JSON Data (.json)", description: "Struktur data objek/array", iconName: "Braces" },
+        { value: "html", label: "HTML Table (.html)", description: "Tabel format web siap semat", iconName: "Code" },
+        { value: "docx", label: "Word Document (.docx)", description: "Format tabel ke dokumen Word", iconName: "FileText" },
         { value: "xlsx", label: "Excel Spreadsheet (.xlsx)", description: "Simpan lembar kerja Excel", iconName: "Sheet" },
       ];
     case "txt":
@@ -62,6 +66,8 @@ export function getAvailableTargets(ext: SupportedFormat): TargetOption[] {
       return [
         { value: "pdf", label: "PDF Document (.pdf)", description: "Cetak teks ke format PDF", iconName: "FileCheck" },
         { value: "docx", label: "Word Document (.docx)", description: "Konversi ke dokumen Word", iconName: "FileText" },
+        { value: "xlsx", label: "Excel Spreadsheet (.xlsx)", description: "Baris teks ke tabel Excel", iconName: "Sheet" },
+        { value: "html", label: "HTML Webpage (.html)", description: "Halaman web berformat", iconName: "Code" },
         { value: "txt", label: "Plain Text (.txt)", description: "Simpan teks murni", iconName: "File" },
       ];
   }
@@ -137,12 +143,10 @@ export async function parseUploadedFile(file: File): Promise<LoadedDocument> {
 
   // 3. PDF format
   if (ext === "pdf") {
-    // Read raw buffer and extract ascii text chunks or provide editable workspace
     const buffer = await file.arrayBuffer();
     const decoder = new TextDecoder("utf-8");
     const rawContent = decoder.decode(buffer);
     
-    // Simple stream text extractor for standard PDFs
     const matches = rawContent.match(/\((.*?)\)\s*Tj/g) || [];
     let extractedText = matches
       .map((m) => m.replace(/^\(/, "").replace(/\)\s*Tj$/, ""))
@@ -153,7 +157,6 @@ export async function parseUploadedFile(file: File): Promise<LoadedDocument> {
     }
 
     const lines = extractedText.split("\n").filter((l) => l.trim().length > 0);
-    // Prepare table sample data if user wants to convert PDF to Excel
     const sheetSample: (string | number)[][] = [
       ["No", "Deskripsi", "Nilai (IDR)", "Status"],
       [1, "Pendapatan Kuartal 1", "125.000.000", "Terverifikasi"],
@@ -220,7 +223,7 @@ export async function exportDocument(
   const baseName = doc.name.replace(/\.[^/.]+$/, "");
   const outputFileName = `${baseName}_edited.${targetExt}`;
 
-  // SPREADSHEET EXPORTS
+  // SPREADSHEET MODE EXPORTS
   if (doc.mode === "spreadsheet") {
     if (targetExt === "xlsx") {
       const ws = XLSX.utils.aoa_to_sheet(doc.sheetData);
@@ -241,6 +244,44 @@ export async function exportDocument(
     if (targetExt === "json") {
       const jsonOutput = JSON.stringify(doc.sheetData, null, 2);
       const blob = new Blob([jsonOutput], { type: "application/json;charset=utf-8;" });
+      downloadBlob(blob, outputFileName);
+      return;
+    }
+
+    if (targetExt === "html") {
+      const rowsHtml = doc.sheetData
+        .map(
+          (row, idx) =>
+            `<tr>${row
+              .map((cell) =>
+                idx === 0
+                  ? `<th style="border:1px solid #ddd;padding:8px;background:#f4f4f4;">${cell ?? ""}</th>`
+                  : `<td style="border:1px solid #ddd;padding:8px;">${cell ?? ""}</td>`
+              )
+              .join("")}</tr>`
+        )
+        .join("\n");
+      const htmlDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${baseName}</title><style>table{border-collapse:collapse;width:100%;font-family:sans-serif;}</style></head><body><h2>${baseName}</h2><table>${rowsHtml}</table></body></html>`;
+      const blob = new Blob([htmlDoc], { type: "text/html;charset=utf-8;" });
+      downloadBlob(blob, outputFileName);
+      return;
+    }
+
+    if (targetExt === "docx") {
+      const rowsHtml = doc.sheetData
+        .map(
+          (row, idx) =>
+            `<tr>${row
+              .map((cell) =>
+                idx === 0
+                  ? `<th style="border:1px solid #333;padding:8px;background:#eee;">${cell ?? ""}</th>`
+                  : `<td style="border:1px solid #333;padding:8px;">${cell ?? ""}</td>`
+              )
+              .join("")}</tr>`
+        )
+        .join("");
+      const wordHtml = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>${baseName}</title></head><body><h2>${baseName}</h2><table border="1" style="border-collapse:collapse;width:100%;">${rowsHtml}</table></body></html>`;
+      const blob = new Blob(["\ufeff", wordHtml], { type: "application/msword" });
       downloadBlob(blob, outputFileName);
       return;
     }
@@ -273,9 +314,25 @@ export async function exportDocument(
     }
   }
 
-  // DOCUMENT EXPORTS
+  // DOCUMENT MODE EXPORTS
   if (targetExt === "txt" || targetExt === "md") {
     const blob = new Blob([doc.contentText], { type: "text/plain;charset=utf-8;" });
+    downloadBlob(blob, outputFileName);
+    return;
+  }
+
+  if (targetExt === "csv") {
+    const lines = doc.contentText.split("\n").filter((l) => l.trim().length > 0);
+    const csvContent = lines.map((l) => `"${l.replace(/"/g, '""')}"`).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    downloadBlob(blob, outputFileName);
+    return;
+  }
+
+  if (targetExt === "json") {
+    const lines = doc.contentText.split("\n").filter((l) => l.trim().length > 0);
+    const jsonOutput = JSON.stringify({ filename: doc.name, lines, content: doc.contentText }, null, 2);
+    const blob = new Blob([jsonOutput], { type: "application/json;charset=utf-8;" });
     downloadBlob(blob, outputFileName);
     return;
   }
@@ -329,7 +386,6 @@ export async function exportDocument(
   }
 
   if (targetExt === "docx") {
-    // Generate valid Word document compatible HTML envelope
     const wordHtml = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head><meta charset='utf-8'><title>${baseName}</title></head>
@@ -344,7 +400,6 @@ export async function exportDocument(
   }
 
   if (targetExt === "xlsx") {
-    // Convert text lines to rows in excel
     const lines = doc.contentText.split("\n").filter((l) => l.trim().length > 0);
     const rows = lines.map((l, index) => [index + 1, l]);
     rows.unshift(["No", "Teks / Baris"]);

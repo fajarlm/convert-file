@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/lib/types";
 import { useAppTheme } from "@/context/ThemeContext";
+import { translateText } from "@/lib/translator";
 
 interface DocumentEditorProps {
   content: string;
@@ -64,22 +65,14 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
   };
 
   const handleTranslateSelection = async () => {
-    if (!selectedText) return;
+    if (!selectedText.trim()) return;
     setIsTranslatingSelection(true);
     try {
-      const res = await fetch("/api/translate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: selectedText,
-          targetLang,
-        }),
-      });
-      const data = await res.json();
-      if (data.translatedText) {
-        setTranslatedSelection(data.translatedText);
+      const translated = await translateText(selectedText, targetLang);
+      if (translated) {
+        setTranslatedSelection(translated);
       } else {
-        alert("Gagal menerjemahkan teks yang dipilih.");
+        alert("Gagal menerjemahkan teks yang dipilih. Coba lagi.");
       }
     } catch (err) {
       console.error(err);
@@ -197,7 +190,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
           </button>
           <span className="text-[11px] opacity-60 hidden sm:inline ml-2">
             <Type className="inline h-3 w-3 mr-1" />
-            Sorot teks untuk terjemah instan
+            Sorot teks untuk terjemah instan kata/kalimat
           </span>
         </div>
 
@@ -241,7 +234,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             {isTranslatingFull ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                <span>Menerjemahkan...</span>
+                <span>Menerjemahkan Dokumen...</span>
               </>
             ) : (
               <>
@@ -262,7 +255,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             left: `${bubblePosition.x}px`,
             top: `${bubblePosition.y}px`,
           }}
-          className={`z-50 flex flex-col gap-2 p-3 w-76 animate-in fade-in zoom-in-95 duration-100 ${
+          className={`z-50 flex flex-col gap-2 p-3 w-80 animate-in fade-in zoom-in-95 duration-100 ${
             theme === "retro"
               ? "bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black font-mono text-black shadow-2xl"
               : theme === "brutalist"
@@ -273,7 +266,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
           }`}
         >
           <div className="flex items-center justify-between border-b border-current/15 pb-1.5">
-            <span className="text-[11px] font-bold uppercase">Ganti Bahasa Teks Terpilih</span>
+            <span className="text-[11px] font-bold uppercase">Ganti Bahasa Kata/Kalimat Terpilih</span>
             <button onClick={() => setBubblePosition(null)} className="cursor-pointer">
               <X className="h-3.5 w-3.5" />
             </button>
@@ -287,11 +280,11 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             <select
               value={targetLang}
               onChange={(e) => setTargetLang(e.target.value)}
-              className="w-full text-xs rounded border border-current/20 bg-white/10 dark:bg-black/20 px-2 py-1 focus:outline-hidden cursor-pointer"
+              className="w-full text-xs rounded border border-current/20 bg-white/10 dark:bg-black/20 px-2 py-1.5 focus:outline-hidden cursor-pointer"
             >
               {LANGUAGE_OPTIONS.map((l) => (
                 <option key={l.code} value={l.code} className="bg-zinc-900 text-white">
-                  {l.name}
+                  {l.flag} {l.name}
                 </option>
               ))}
             </select>
@@ -299,22 +292,23 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
               type="button"
               disabled={isTranslatingSelection}
               onClick={handleTranslateSelection}
-              className="shrink-0 px-3 py-1 text-xs font-bold rounded bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-50 cursor-pointer"
+              className="shrink-0 px-3 py-1.5 text-xs font-bold rounded bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-50 cursor-pointer"
             >
               {isTranslatingSelection ? <Loader2 className="h-3 w-3 animate-spin" /> : "Ubah"}
             </button>
           </div>
 
           {translatedSelection && (
-            <div className="mt-1 flex flex-col gap-1.5 p-2 rounded border border-current/20 bg-emerald-500/10">
+            <div className="mt-1 flex flex-col gap-1.5 p-2.5 rounded border border-current/20 bg-emerald-500/10">
+              <div className="text-[10px] uppercase font-bold text-emerald-500">Hasil Terjemahan:</div>
               <p className="text-xs font-semibold">{translatedSelection}</p>
               <button
                 type="button"
                 onClick={applyTranslatedSelection}
-                className="inline-flex items-center justify-center gap-1 py-1 px-2 text-xs font-bold rounded bg-emerald-600 text-white hover:bg-emerald-500 cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-bold rounded bg-emerald-600 text-white hover:bg-emerald-500 cursor-pointer shadow-xs"
               >
                 <Check className="h-3.5 w-3.5" />
-                <span>Terapkan Teks</span>
+                <span>Terapkan ke Dokumen</span>
               </button>
             </div>
           )}
@@ -340,7 +334,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
           <span>{content.trim() ? content.trim().split(/\s+/).length : 0} kata</span> •{" "}
           <span>{content.length} karakter</span>
         </div>
-        <div>Highlight teks untuk membuka opsi ubah bahasa</div>
+        <div>Highlight kata atau kalimat tertentu untuk mengubah bahasa bagian tersebut</div>
       </div>
     </div>
   );

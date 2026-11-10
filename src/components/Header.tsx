@@ -4,6 +4,7 @@ import React from "react";
 import { Cpu, Layers, FileEdit, X } from "lucide-react";
 import { useAppTheme } from "@/context/ThemeContext";
 import { ThemeSelector } from "./ThemeSelector";
+import { ApiKeyModal } from "./ApiKeyModal";
 
 interface HeaderProps {
   currentFileName?: string;
@@ -43,6 +44,7 @@ export const Header: React.FC<HeaderProps> = ({ currentFileName }) => {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <ApiKeyModal />
             <ThemeSelector />
           </div>
         </div>
@@ -77,7 +79,8 @@ export const Header: React.FC<HeaderProps> = ({ currentFileName }) => {
             </div>
           )}
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <ApiKeyModal />
             <ThemeSelector />
           </div>
         </div>
@@ -98,6 +101,7 @@ export const Header: React.FC<HeaderProps> = ({ currentFileName }) => {
                 / studio
               </span>
             </div>
+
             {currentFileName && (
               <>
                 <span className="text-zinc-300">•</span>
@@ -108,7 +112,8 @@ export const Header: React.FC<HeaderProps> = ({ currentFileName }) => {
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <ApiKeyModal />
             <ThemeSelector />
           </div>
         </div>
@@ -154,12 +159,13 @@ export const Header: React.FC<HeaderProps> = ({ currentFileName }) => {
           </div>
         ) : null}
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="hidden sm:flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-1 text-xs font-medium text-emerald-400">
             <Cpu className="h-3.5 w-3.5" />
             <span>WASM Engine</span>
           </div>
 
+          <ApiKeyModal />
           <ThemeSelector />
         </div>
       </div>
