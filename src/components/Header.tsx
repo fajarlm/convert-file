@@ -1,53 +1,55 @@
 "use client";
 
 import React from "react";
-import { FileEdit, Sparkles, ShieldCheck } from "lucide-react";
+import { FileEdit, Sparkles, Zap } from "lucide-react";
 
 interface HeaderProps {
   currentFileName?: string;
-  isReadyForDeploy?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentFileName }) => {
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-zinc-200 bg-white/80 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/80">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 w-full border-b-4 border-black bg-white">
+      <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        {/* Brand Logo */}
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-sky-400 text-white shadow-md shadow-indigo-500/20">
-            <FileEdit className="h-5 w-5" />
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl border-3 border-black bg-[#FFE600] text-black shadow-[3px_3px_0px_#000] rotate-[-2deg]">
+            <FileEdit className="h-6 w-6 stroke-[2.5]" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-base font-bold tracking-tight text-zinc-900 dark:text-white">
+              <span className="text-xl font-black tracking-tight text-black">
                 DocMorph
               </span>
-              <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
-                Studio
+              <span className="rounded-md border-2 border-black bg-[#FF6B6B] px-2 py-0.5 text-xs font-black text-white shadow-[2px_2px_0px_#000]">
+                STUDIO
               </span>
             </div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="text-xs font-semibold text-zinc-600">
               In-Place File Editor & Multi-Format Converter
             </p>
           </div>
         </div>
 
+        {/* Current File Pill */}
         {currentFileName ? (
-          <div className="hidden md:flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-medium truncate max-w-xs">{currentFileName}</span>
-            <span className="text-zinc-400">• Mode Siap Diedit</span>
+          <div className="hidden md:flex items-center gap-2 rounded-xl border-2 border-black bg-[#E0E7FF] px-3.5 py-1.5 text-xs font-bold text-black shadow-[3px_3px_0px_#000]">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#10B981] border border-black animate-pulse" />
+            <span className="truncate max-w-xs">{currentFileName}</span>
+            <span className="text-zinc-600 font-medium">• Siap Diedit</span>
           </div>
         ) : null}
 
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50/70 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-400">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            <span>Vercel Edge Ready</span>
+        {/* Badges / CTAs */}
+        <div className="flex items-center gap-2.5">
+          <div className="hidden sm:flex items-center gap-1.5 rounded-lg border-2 border-black bg-[#6EE7B7] px-3 py-1 text-xs font-black text-black shadow-[2px_2px_0px_#000]">
+            <Zap className="h-3.5 w-3.5 fill-black" />
+            <span>VERCEL EDGE</span>
           </div>
 
-          <div className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-100 px-2.5 py-1 text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
-            <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
-            <span>AI Translation Powered</span>
+          <div className="flex items-center gap-1.5 rounded-lg border-2 border-black bg-[#C4B5FD] px-3 py-1 text-xs font-black text-black shadow-[2px_2px_0px_#000]">
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>AI TRANSLATE</span>
           </div>
         </div>
       </div>

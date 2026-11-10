@@ -54,7 +54,6 @@ export const DropZone: React.FC<DropZoneProps> = ({ onDocumentLoaded }) => {
     }
   };
 
-  // Preset demo samples
   const loadSample = (type: "pdf" | "xlsx" | "docx") => {
     if (type === "pdf") {
       const sampleText = `LAPORAN EVALUASI & PENJUALAN PERUSAHAAN KUARTAL III\n\nPT Digital Nusantara Perkasa\nTanggal: 10 November 2026\n\nRingkasan Eksekutif:\nKinerja penjualan kuartal ini mencatatkan pertumbuhan signifikan sebesar 24% dibandingkan kuartal sebelumnya. Ekspansi ke pasar regional Asia Tenggara telah membuahkan hasil positif.\n\nRincian Metrik:\n- Total Pendapatan Operasional: Rp 450.000.000\n- Beban Pokok Penjualan: Rp 180.000.000\n- Laba Bersih Operasional: Rp 270.000.000\n- Kepuasan Pelanggan: 94.8%\n\nRekomendasi Strategis:\n1. Mengoptimalkan saluran pemasaran digital untuk meningkatkan konversi pengguna baru.\n2. Mempercepat otomatisasi proses konversi dan penerjemahan dokumen internal.\n3. Mempertahankan margin laba bersih di atas 20% pada kuartal mendatang.`;
@@ -128,33 +127,36 @@ export const DropZone: React.FC<DropZoneProps> = ({ onDocumentLoaded }) => {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
-      {/* Hero Header */}
+      {/* Hero Badge & Title */}
       <div className="text-center mb-10">
-        <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50/80 px-3 py-1 text-xs font-semibold text-indigo-700 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-400 mb-4 shadow-sm">
-          <Sparkles className="h-3.5 w-3.5" />
-          <span>Editor & Converter All-in-One + AI Translation</span>
+        <div className="inline-flex items-center gap-2 rounded-xl border-3 border-black bg-[#FFE600] px-4 py-1.5 text-xs font-black uppercase tracking-wider text-black shadow-[4px_4px_0px_#000] rotate-[-1deg] mb-5">
+          <Sparkles className="h-4 w-4" />
+          <span>Editor & Converter All-In-One + AI Translate</span>
         </div>
-        <h1 className="text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl dark:text-white">
-          Edit, Terjemahkan & Konversi{" "}
-          <span className="bg-gradient-to-r from-indigo-600 via-sky-500 to-indigo-500 bg-clip-text text-transparent">
-            Semua Format Berkas
-          </span>
+
+        <h1 className="text-4xl font-black tracking-tight text-black sm:text-6xl uppercase leading-tight">
+          EDIT, TERJEMAHKAN &amp; <br className="hidden sm:inline" />
+          <span className="inline-block bg-[#38BDF8] px-3 py-0.5 border-3 border-black shadow-[5px_5px_0px_#000] rotate-[1deg] text-black my-1">
+            KONVERSI FILE
+          </span>{" "}
+          APA PUN!
         </h1>
-        <p className="mt-4 text-base text-zinc-600 sm:text-lg dark:text-zinc-400 max-w-2xl mx-auto">
-          Unggah PDF, Excel, Word, atau teks. Edit isinya langsung di browser, ubah bahasa kata tertentu atau seluruh dokumen, lalu simpan dalam format asli atau konversi ke format lain.
+
+        <p className="mt-5 text-base sm:text-lg font-bold text-zinc-700 max-w-2xl mx-auto">
+          Bisa hanya <span className="bg-[#A7F3D0] px-1.5 py-0.5 border border-black rounded">edit saja</span> tanpa ubah format, atau <span className="bg-[#FDE047] px-1.5 py-0.5 border border-black rounded">edit lalu konversi</span> (misal PDF $\rightarrow$ Excel). Plus fitur ganti bahasa per-kata atau seluruh file!
         </p>
       </div>
 
-      {/* Main Drag & Drop Zone */}
+      {/* Main Neo-Brutalist Dropzone */}
       <div
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`relative cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition-all duration-200 shadow-sm ${
+        className={`relative cursor-pointer rounded-2xl border-4 border-black p-10 text-center transition-all duration-150 ${
           isDragging
-            ? "border-indigo-600 bg-indigo-50/60 dark:border-indigo-400 dark:bg-indigo-950/30 scale-[1.01]"
-            : "border-zinc-300 bg-white hover:border-indigo-400 hover:bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-900/60 dark:hover:border-zinc-700"
+            ? "bg-[#FEF08A] shadow-[12px_12px_0px_#000] scale-[1.01]"
+            : "bg-white shadow-[8px_8px_0px_#000] hover:shadow-[12px_12px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px]"
         }`}
       >
         <input
@@ -169,138 +171,143 @@ export const DropZone: React.FC<DropZoneProps> = ({ onDocumentLoaded }) => {
           }}
         />
 
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-inner mb-4">
-          <UploadCloud className="h-8 w-8" />
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl border-3 border-black bg-[#FFDE59] text-black shadow-[4px_4px_0px_#000] mb-5">
+          <UploadCloud className="h-10 w-10 stroke-[2.5]" />
         </div>
 
-        <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">
-          {isLoading ? "Sedang memproses berkas..." : "Tarik & Lepaskan berkas ke sini"}
+        <h3 className="text-2xl font-black text-black uppercase tracking-tight">
+          {isLoading ? "SEDANG MEMPROSES BERKAS..." : "TARIK & LEPASKAN BERKAS KE SINI"}
         </h3>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          atau klik untuk memilih dari komputer Anda
+        <p className="mt-2 text-sm font-bold text-zinc-600">
+          atau <span className="underline decoration-black decoration-2">klik untuk memilih berkas dari komputer</span>
         </p>
 
-        {/* Supported Badges */}
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 dark:border-red-950 dark:bg-red-950/30 dark:text-red-400">
-            <FileCheck className="h-3.5 w-3.5" /> PDF (.pdf)
+        {/* Format Badges Sticker Style */}
+        <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+          <span className="inline-flex items-center gap-1.5 rounded-lg border-2 border-black bg-[#FB7185] px-3 py-1.5 text-xs font-black text-black shadow-[2px_2px_0px_#000]">
+            <FileCheck className="h-4 w-4" /> PDF (.pdf)
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-950 dark:bg-emerald-950/30 dark:text-emerald-400">
-            <FileSpreadsheet className="h-3.5 w-3.5" /> Excel (.xlsx, .csv)
+          <span className="inline-flex items-center gap-1.5 rounded-lg border-2 border-black bg-[#4ADE80] px-3 py-1.5 text-xs font-black text-black shadow-[2px_2px_0px_#000]">
+            <FileSpreadsheet className="h-4 w-4" /> Excel (.xlsx, .csv)
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:border-blue-950 dark:bg-blue-950/30 dark:text-blue-400">
-            <FileText className="h-3.5 w-3.5" /> Word (.docx)
+          <span className="inline-flex items-center gap-1.5 rounded-lg border-2 border-black bg-[#38BDF8] px-3 py-1.5 text-xs font-black text-black shadow-[2px_2px_0px_#000]">
+            <FileText className="h-4 w-4" /> Word (.docx)
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-700 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-300">
-            <FileType className="h-3.5 w-3.5" /> TXT, MD, JSON, HTML
+          <span className="inline-flex items-center gap-1.5 rounded-lg border-2 border-black bg-[#FBBF24] px-3 py-1.5 text-xs font-black text-black shadow-[2px_2px_0px_#000]">
+            <FileType className="h-4 w-4" /> TXT, MD, JSON, HTML
           </span>
         </div>
       </div>
 
-      {/* 1-Click Interactive Demo Samples */}
-      <div className="mt-8 rounded-xl border border-zinc-200 bg-zinc-50/70 p-5 dark:border-zinc-800 dark:bg-zinc-900/40">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            <Zap className="h-4 w-4 text-amber-500" />
-            <span>Coba Langsung dengan Berkas Contoh (1-Klik)</span>
+      {/* 1-Click Interactive Demo Buttons */}
+      <div className="mt-10 rounded-2xl border-4 border-black bg-[#FFFBEB] p-6 shadow-[6px_6px_0px_#000]">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-2 text-sm font-black uppercase text-black">
+            <Zap className="h-5 w-5 fill-amber-400 stroke-[2.5]" />
+            <span>Coba Cepat Berkas Contoh (1-Klik)</span>
           </div>
-          <span className="text-xs text-zinc-400">Tanpa perlu cari berkas</span>
+          <span className="text-xs font-bold text-zinc-600">
+            *Langsung buka di editor tanpa upload
+          </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Sample PDF */}
           <button
             type="button"
             onClick={() => loadSample("pdf")}
-            className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-3 text-left hover:border-red-400 hover:shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-red-900 transition-all group"
+            className="flex items-center justify-between rounded-xl border-3 border-black bg-white p-4 text-left shadow-[4px_4px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all cursor-pointer group"
           >
-            <div className="flex items-center gap-2.5 truncate">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400">
-                <FileCheck className="h-4 w-4" />
+            <div className="flex items-center gap-3 truncate">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-black bg-[#FB7185] text-black shadow-[2px_2px_0px_#000]">
+                <FileCheck className="h-5 w-5 stroke-[2.5]" />
               </span>
               <div className="truncate">
-                <p className="text-xs font-semibold text-zinc-900 dark:text-white truncate">
+                <p className="text-xs font-black text-black uppercase truncate">
                   Contoh PDF Laporan
                 </p>
-                <p className="text-[11px] text-zinc-500">Edit & Konversi ke Excel</p>
+                <p className="text-[11px] font-bold text-zinc-500">Edit &amp; Ke Excel</p>
               </div>
             </div>
-            <ArrowRight className="h-4 w-4 text-zinc-400 group-hover:text-red-500 group-hover:translate-x-0.5 transition-all" />
+            <ArrowRight className="h-5 w-5 stroke-[2.5] text-black group-hover:translate-x-1 transition-transform" />
           </button>
 
+          {/* Sample Excel */}
           <button
             type="button"
             onClick={() => loadSample("xlsx")}
-            className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-3 text-left hover:border-emerald-400 hover:shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-emerald-900 transition-all group"
+            className="flex items-center justify-between rounded-xl border-3 border-black bg-white p-4 text-left shadow-[4px_4px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all cursor-pointer group"
           >
-            <div className="flex items-center gap-2.5 truncate">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
-                <FileSpreadsheet className="h-4 w-4" />
+            <div className="flex items-center gap-3 truncate">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-black bg-[#4ADE80] text-black shadow-[2px_2px_0px_#000]">
+                <FileSpreadsheet className="h-5 w-5 stroke-[2.5]" />
               </span>
               <div className="truncate">
-                <p className="text-xs font-semibold text-zinc-900 dark:text-white truncate">
+                <p className="text-xs font-black text-black uppercase truncate">
                   Contoh Excel Gaji
                 </p>
-                <p className="text-[11px] text-zinc-500">Edit Sel & Cetak ke PDF</p>
+                <p className="text-[11px] font-bold text-zinc-500">Edit Sel &amp; Ke PDF</p>
               </div>
             </div>
-            <ArrowRight className="h-4 w-4 text-zinc-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all" />
+            <ArrowRight className="h-5 w-5 stroke-[2.5] text-black group-hover:translate-x-1 transition-transform" />
           </button>
 
+          {/* Sample Word */}
           <button
             type="button"
             onClick={() => loadSample("docx")}
-            className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-3 text-left hover:border-blue-400 hover:shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-blue-900 transition-all group"
+            className="flex items-center justify-between rounded-xl border-3 border-black bg-white p-4 text-left shadow-[4px_4px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all cursor-pointer group"
           >
-            <div className="flex items-center gap-2.5 truncate">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
-                <FileText className="h-4 w-4" />
+            <div className="flex items-center gap-3 truncate">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-black bg-[#38BDF8] text-black shadow-[2px_2px_0px_#000]">
+                <FileText className="h-5 w-5 stroke-[2.5]" />
               </span>
               <div className="truncate">
-                <p className="text-xs font-semibold text-zinc-900 dark:text-white truncate">
-                  Contoh Dokumen Word
+                <p className="text-xs font-black text-black uppercase truncate">
+                  Contoh Word Surat
                 </p>
-                <p className="text-[11px] text-zinc-500">Terjemah Bahasa & Simpan</p>
+                <p className="text-[11px] font-bold text-zinc-500">Translate Kata &amp; Doc</p>
               </div>
             </div>
-            <ArrowRight className="h-4 w-4 text-zinc-400 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all" />
+            <ArrowRight className="h-5 w-5 stroke-[2.5] text-black group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
       </div>
 
-      {/* Feature Value Props */}
+      {/* Feature Highlights Grid */}
       <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-        <div className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900/50">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400 mb-3">
-            <Zap className="h-5 w-5" />
+        <div className="rounded-2xl border-3 border-black bg-[#EDE9FE] p-5 shadow-[5px_5px_0px_#000]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border-2 border-black bg-white text-black shadow-[2px_2px_0px_#000] mb-3">
+            <Zap className="h-5 w-5 stroke-[2.5]" />
           </div>
-          <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
+          <h4 className="text-base font-black text-black uppercase">
             Dual Mode Fleksibel
           </h4>
-          <p className="mt-1.5 text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+          <p className="mt-2 text-xs font-bold text-zinc-700 leading-relaxed">
             Pilih bebas antara <b>Hanya Ingin Mengedit</b> (simpan ke ekstensi asli) atau <b>Edit lalu Konversi</b> ke format dokumen lain.
           </p>
         </div>
 
-        <div className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900/50">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-50 text-sky-600 dark:bg-sky-950 dark:text-sky-400 mb-3">
-            <Sparkles className="h-5 w-5" />
+        <div className="rounded-2xl border-3 border-black bg-[#CFFAFE] p-5 shadow-[5px_5px_0px_#000]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border-2 border-black bg-white text-black shadow-[2px_2px_0px_#000] mb-3">
+            <Sparkles className="h-5 w-5 stroke-[2.5]" />
           </div>
-          <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
-            Granular & Full AI Translate
+          <h4 className="text-base font-black text-black uppercase">
+            AI Translate Per-Kata &amp; Full
           </h4>
-          <p className="mt-1.5 text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+          <p className="mt-2 text-xs font-bold text-zinc-700 leading-relaxed">
             Sorot kata tertentu untuk menerjemahkan secara instan di tempat, atau klik satu tombol untuk menerjemahkan seluruh lembar dokumen.
           </p>
         </div>
 
-        <div className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900/50">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 mb-3">
-            <Shield className="h-5 w-5" />
+        <div className="rounded-2xl border-3 border-black bg-[#DCFCE7] p-5 shadow-[5px_5px_0px_#000]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border-2 border-black bg-white text-black shadow-[2px_2px_0px_#000] mb-3">
+            <Shield className="h-5 w-5 stroke-[2.5]" />
           </div>
-          <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
-            100% Client & Vercel Ready
+          <h4 className="text-base font-black text-black uppercase">
+            100% Client &amp; Vercel Ready
           </h4>
-          <p className="mt-1.5 text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+          <p className="mt-2 text-xs font-bold text-zinc-700 leading-relaxed">
             Pemrosesan cepat langsung di browser dan serverless route yang ringan, siap langsung dideploy ke hosting Vercel.
           </p>
         </div>

@@ -31,7 +31,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
   const [selectedText, setSelectedText] = useState("");
   const [selectionRange, setSelectionRange] = useState<{ start: number; end: number } | null>(null);
   const [bubblePosition, setBubblePosition] = useState<{ x: number; y: number } | null>(null);
-  
+
   // Selection translation state
   const [targetLang, setTargetLang] = useState("en");
   const [fullTargetLang, setFullTargetLang] = useState("en");
@@ -49,10 +49,9 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
       setSelectionRange({ start, end });
       setTranslatedSelection("");
 
-      // Calculate approximate position for bubble popup
       const rect = textareaRef.current.getBoundingClientRect();
       setBubblePosition({
-        x: Math.min(Math.max(rect.left + 40, 60), window.innerWidth - 340),
+        x: Math.min(Math.max(rect.left + 40, 60), window.innerWidth - 360),
         y: Math.max(rect.top - 8, 80),
       });
     } else {
@@ -101,7 +100,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
     setTranslatedSelection("");
   };
 
-  // Close bubble on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -113,7 +111,6 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
     return () => window.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Quick formatting helpers
   const applyWrapFormat = (prefix: string, suffix: string = prefix) => {
     if (!textareaRef.current || !selectionRange) return;
     const before = content.substring(0, selectionRange.start);
@@ -123,49 +120,49 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
   };
 
   return (
-    <div className="relative flex flex-col h-full bg-white dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
-      {/* Editor Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 bg-zinc-50/80 px-4 py-2.5 dark:border-zinc-800 dark:bg-zinc-900/60">
-        <div className="flex items-center gap-1">
+    <div className="relative flex flex-col h-full bg-white rounded-2xl border-4 border-black shadow-[8px_8px_0px_#000] overflow-hidden">
+      {/* Editor Toolbar Neo-Brutalist */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b-3 border-black bg-[#FEF08A] px-4 py-3">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => applyWrapFormat("**")}
             title="Tebal (Bold)"
-            className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-black bg-white text-black shadow-[2px_2px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none hover:bg-zinc-50 cursor-pointer"
           >
-            <Bold className="h-4 w-4" />
+            <Bold className="h-4 w-4 stroke-[2.5]" />
           </button>
           <button
             type="button"
             onClick={() => applyWrapFormat("*")}
             title="Miring (Italic)"
-            className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-black bg-white text-black shadow-[2px_2px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none hover:bg-zinc-50 cursor-pointer"
           >
-            <Italic className="h-4 w-4" />
+            <Italic className="h-4 w-4 stroke-[2.5]" />
           </button>
           <button
             type="button"
             onClick={() => applyWrapFormat("\n- ")}
             title="Daftar Poin (Bullet List)"
-            className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-black bg-white text-black shadow-[2px_2px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none hover:bg-zinc-50 cursor-pointer"
           >
-            <List className="h-4 w-4" />
+            <List className="h-4 w-4 stroke-[2.5]" />
           </button>
-          <div className="h-4 w-px bg-zinc-300 dark:bg-zinc-700 mx-1" />
-          <span className="text-xs text-zinc-500 hidden sm:inline">
-            <Type className="inline h-3.5 w-3.5 mr-1" />
-            Sorot teks untuk terjemahkan kata/kalimat tertentu
+          <div className="h-6 w-0.5 bg-black mx-1" />
+          <span className="text-xs font-bold text-black hidden sm:inline">
+            <Type className="inline h-3.5 w-3.5 mr-1 stroke-[2.5]" />
+            Sorot teks untuk terjemahkan kata tertentu
           </span>
         </div>
 
         {/* Full Document Translation Controls */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1 shadow-2xs">
-            <Globe className="h-3.5 w-3.5 text-indigo-500" />
+          <div className="flex items-center gap-1.5 rounded-lg border-2 border-black bg-white px-2.5 py-1.5 shadow-[2px_2px_0px_#000]">
+            <Globe className="h-4 w-4 stroke-[2.5] text-black" />
             <select
               value={fullTargetLang}
               onChange={(e) => setFullTargetLang(e.target.value)}
-              className="text-xs bg-transparent border-none focus:outline-hidden text-zinc-700 dark:text-zinc-300"
+              className="text-xs font-bold bg-transparent border-none focus:outline-hidden text-black cursor-pointer"
             >
               {LANGUAGE_OPTIONS.map((lang) => (
                 <option key={lang.code} value={lang.code}>
@@ -179,16 +176,16 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             type="button"
             disabled={isTranslatingFull}
             onClick={() => onFullTranslate(fullTargetLang)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60 transition-all"
+            className="inline-flex items-center gap-1.5 rounded-lg border-2 border-black bg-[#C084FC] px-3.5 py-1.5 text-xs font-black text-black shadow-[3px_3px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_#000] active:translate-x-1 active:translate-y-1 active:shadow-none disabled:opacity-60 transition-all cursor-pointer"
           >
             {isTranslatingFull ? (
               <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                <span>Menerjemahkan Dokumen...</span>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Menerjemahkan...</span>
               </>
             ) : (
               <>
-                <Sparkles className="h-3.5 w-3.5" />
+                <Sparkles className="h-4 w-4 stroke-[2.5]" />
                 <span>Terjemahkan Seluruh Dokumen</span>
               </>
             )}
@@ -196,7 +193,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
         </div>
       </div>
 
-      {/* Floating Selection Translation Bubble */}
+      {/* Floating Selection Translation Bubble Neo-Brutalist */}
       {bubblePosition && selectedText && (
         <div
           id="translation-bubble"
@@ -205,23 +202,23 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             left: `${bubblePosition.x}px`,
             top: `${bubblePosition.y}px`,
           }}
-          className="z-50 flex flex-col gap-2 rounded-xl border border-indigo-200 bg-white p-3 shadow-xl ring-1 ring-black/5 dark:border-indigo-900 dark:bg-zinc-900 animate-in fade-in zoom-in-95 duration-150 w-80"
+          className="z-50 flex flex-col gap-2.5 rounded-2xl border-3 border-black bg-[#FFE600] p-4 shadow-[8px_8px_0px_#000] w-84 animate-in fade-in zoom-in-95 duration-100"
         >
-          <div className="flex items-center justify-between border-b border-zinc-100 pb-2 dark:border-zinc-800">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>Terjemahkan Teks Terpilih</span>
+          <div className="flex items-center justify-between border-b-2 border-black pb-2">
+            <div className="flex items-center gap-1.5 text-xs font-black uppercase text-black">
+              <Sparkles className="h-4 w-4 stroke-[2.5]" />
+              <span>Ganti Bahasa Teks Terpilih</span>
             </div>
             <button
               type="button"
               onClick={() => setBubblePosition(null)}
-              className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+              className="h-6 w-6 flex items-center justify-center rounded border-2 border-black bg-white text-black hover:bg-red-200 cursor-pointer shadow-[1px_1px_0px_#000]"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-3.5 w-3.5 stroke-[3]" />
             </button>
           </div>
 
-          <div className="text-[11px] font-mono text-zinc-500 bg-zinc-50 dark:bg-zinc-800/60 p-1.5 rounded max-h-16 overflow-y-auto">
+          <div className="text-xs font-bold font-mono text-black bg-white border-2 border-black p-2 rounded-lg max-h-20 overflow-y-auto shadow-inner">
             &ldquo;{selectedText}&rdquo;
           </div>
 
@@ -229,7 +226,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             <select
               value={targetLang}
               onChange={(e) => setTargetLang(e.target.value)}
-              className="w-full text-xs rounded-md border border-zinc-200 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 focus:outline-hidden"
+              className="w-full text-xs font-bold rounded-lg border-2 border-black bg-white px-2.5 py-1.5 text-black focus:outline-hidden shadow-[2px_2px_0px_#000]"
             >
               {LANGUAGE_OPTIONS.map((l) => (
                 <option key={l.code} value={l.code}>
@@ -242,27 +239,27 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
               type="button"
               disabled={isTranslatingSelection}
               onClick={handleTranslateSelection}
-              className="shrink-0 rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+              className="shrink-0 rounded-lg border-2 border-black bg-[#38BDF8] px-3 py-1.5 text-xs font-black text-black shadow-[2px_2px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer disabled:opacity-50"
             >
               {isTranslatingSelection ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                "Proses"
+                "Ubah"
               )}
             </button>
           </div>
 
           {translatedSelection && (
-            <div className="mt-1 flex flex-col gap-2 rounded-lg bg-emerald-50/80 p-2 border border-emerald-200 dark:border-emerald-900/60 dark:bg-emerald-950/40">
-              <p className="text-xs text-emerald-900 dark:text-emerald-200 font-medium">
+            <div className="mt-1 flex flex-col gap-2 rounded-xl bg-[#DCFCE7] p-3 border-2 border-black shadow-[2px_2px_0px_#000]">
+              <p className="text-xs font-bold text-black">
                 {translatedSelection}
               </p>
               <button
                 type="button"
                 onClick={applyTranslatedSelection}
-                className="inline-flex items-center justify-center gap-1 rounded bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-emerald-500"
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border-2 border-black bg-[#22C55E] px-3 py-1.5 text-xs font-black text-black shadow-[2px_2px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
               >
-                <Check className="h-3 w-3" />
+                <Check className="h-4 w-4 stroke-[3]" />
                 <span>Ganti Teks Sekarang</span>
               </button>
             </div>
@@ -271,7 +268,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
       )}
 
       {/* Main Textarea Canvas */}
-      <div className="relative flex-1 p-6">
+      <div className="relative flex-1 p-6 bg-white">
         <textarea
           id="document-textarea"
           ref={textareaRef}
@@ -279,19 +276,21 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
           onChange={(e) => onChange(e.target.value)}
           onSelect={handleSelect}
           placeholder="Ketik atau edit isi dokumen di sini..."
-          className="w-full h-full min-h-[480px] resize-none border-none bg-transparent font-sans text-sm md:text-base leading-relaxed text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-0"
+          className="w-full h-full min-h-[480px] resize-none border-none bg-transparent font-sans text-base leading-relaxed text-black font-medium focus:outline-hidden focus:ring-0"
         />
       </div>
 
       {/* Document Stats Footer */}
-      <div className="flex items-center justify-between border-t border-zinc-200 bg-zinc-50/70 px-4 py-2 text-xs text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400">
+      <div className="flex items-center justify-between border-t-3 border-black bg-[#F4F4F5] px-4 py-2.5 text-xs font-bold text-black">
         <div className="flex items-center gap-4">
           <span>{content.trim() ? content.trim().split(/\s+/).length : 0} Kata</span>
+          <span>•</span>
           <span>{content.length} Karakter</span>
+          <span>•</span>
           <span>{content.split("\n").length} Baris</span>
         </div>
-        <div className="text-[11px] text-zinc-400">
-          Tip: Tekan Ctrl+A atau pilih teks untuk aksi terjemahan kata
+        <div className="text-xs font-semibold text-zinc-600 hidden sm:inline">
+          Tip: Tekan Ctrl+A atau sorot teks untuk membuka bubble ganti bahasa
         </div>
       </div>
     </div>
