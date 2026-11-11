@@ -46,6 +46,13 @@ export interface ThemeOption {
 
 export const THEME_OPTIONS: ThemeOption[] = [
   {
+    id: "retro",
+    name: "Retro Windows 98",
+    icon: "💾",
+    badge: "Default OS",
+    description: "Teal desktop, 3D bevels & classic window chrome",
+  },
+  {
     id: "cyber",
     name: "Dark Aurora Glass",
     icon: "🌌",
@@ -65,13 +72,6 @@ export const THEME_OPTIONS: ThemeOption[] = [
     icon: "🕊️",
     badge: "Zen",
     description: "Putih susu, tenang tanpa distraksi visual",
-  },
-  {
-    id: "retro",
-    name: "Retro Windows 98",
-    icon: "💾",
-    badge: "Nostalgia 90s",
-    description: "Teal desktop, 3D bevels & classic window chrome",
   },
 ];
 

@@ -8,25 +8,27 @@ interface ThemeContextType {
   setTheme: (theme: AppTheme) => void;
 }
 
+const DEFAULT_THEME: AppTheme = "retro";
+
 const ThemeContext = createContext<ThemeContextType>({
-  theme: "cyber",
+  theme: DEFAULT_THEME,
   setTheme: () => {},
 });
 
 const THEME_STORAGE_KEY = "docmorph-theme";
-const VALID_THEMES: AppTheme[] = ["cyber", "brutalist", "minimal", "retro"];
+const VALID_THEMES: AppTheme[] = ["retro", "cyber", "brutalist", "minimal"];
 
 function getThemeSnapshot(): AppTheme {
-  if (typeof window === "undefined") return "cyber";
+  if (typeof window === "undefined") return DEFAULT_THEME;
   const saved = localStorage.getItem(THEME_STORAGE_KEY) as AppTheme | null;
   if (saved && VALID_THEMES.includes(saved)) {
     return saved;
   }
-  return "cyber";
+  return DEFAULT_THEME;
 }
 
 function getServerSnapshot(): AppTheme {
-  return "cyber";
+  return DEFAULT_THEME;
 }
 
 function subscribeToTheme(callback: () => void) {
