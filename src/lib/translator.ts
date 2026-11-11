@@ -200,7 +200,7 @@ export async function translateBatch(
   return results;
 }
 
-// Long document translator: handles chunking paragraphs so long files never get truncated
+// Long plain text document translator
 export async function translateDocument(
   fullText: string,
   targetLang: string,
@@ -208,12 +208,10 @@ export async function translateDocument(
 ): Promise<string> {
   if (!fullText || fullText.trim() === "") return fullText;
 
-  // If text is short (under 2500 chars), translate directly
   if (fullText.length <= 2500) {
     return await translateText(fullText, targetLang, sourceLang);
   }
 
-  // Split text by double newlines (paragraphs)
   const paragraphs = fullText.split(/\n\n+/);
   const translatedParagraphs: string[] = [];
 
@@ -227,4 +225,59 @@ export async function translateDocument(
   }
 
   return translatedParagraphs.join("\n\n");
+}
+
+/**
+ * Rich HTML Document Translator
+ * Traverses DOM text nodes and translates them in batch while keeping 100% of HTML tags,
+ * tables (table, tr, td, th), bold, italic, underline, lists, and headings intact.
+ */
+export async function translateRichHtml(
+  html: string,
+  targetLang: string,
+  sourceLang: string = "auto"
+): Promise<string> {
+  if (typeof window === "undefined" || !html || !html.trim()) return html;
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+
+    // Collect all leaf text nodes
+    const textNodes: Text[] = [];
+    const walk = (node: Node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const val = node.nodeValue || "";
+        if (val.trim().length > 0) {
+          textNodes.push(node as Text);
+        }
+      } else {
+        if (node.nodeName !== "SCRIPT" && node.nodeName !== "STYLE") {
+          for (let i = 0; i < node.childNodes.length; i++) {
+            walk(node.childNodes[i]);
+          }
+        }
+      }
+    };
+    walk(doc.body);
+
+    if (textNodes.length === 0) return html;
+
+    const rawTexts = textNodes.map((n) => n.nodeValue || "");
+    const translatedTexts = await translateBatch(rawTexts, targetLang, sourceLang);
+
+    textNodes.forEach((node, i) => {
+      if (translatedTexts[i] !== undefined) {
+        const orig = node.nodeValue || "";
+        const leading = orig.match(/^\s*/)?.[0] || "";
+        const trailing = orig.match(/\s*$/)?.[0] || "";
+        node.nodeValue = leading + translatedTexts[i].trim() + trailing;
+      }
+    });
+
+    return doc.body.innerHTML;
+  } catch (err) {
+    console.error("translateRichHtml error:", err);
+    return html;
+  }
 }

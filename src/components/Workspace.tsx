@@ -21,7 +21,7 @@ import {
   FileDown,
 } from "lucide-react";
 import { useAppTheme } from "@/context/ThemeContext";
-import { translateDocument, translateBatch } from "@/lib/translator";
+import { translateRichHtml, translateBatch } from "@/lib/translator";
 
 interface WorkspaceProps {
   document: LoadedDocument;
@@ -44,14 +44,17 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     setDoc((prev) => ({ ...prev, targetExtension: newTarget }));
   };
 
-  const handleDocumentTextChange = (newText: string) => {
+  const handleDocumentHtmlChange = (newHtml: string) => {
+    let plain = "";
+    if (typeof window !== "undefined") {
+      const el = document.createElement("div");
+      el.innerHTML = newHtml;
+      plain = el.innerText || el.textContent || "";
+    }
     setDoc((prev) => ({
       ...prev,
-      contentText: newText,
-      contentHtml: newText
-        .split("\n")
-        .map((l) => `<p>${l || "&nbsp;"}</p>`)
-        .join(""),
+      contentHtml: newHtml,
+      contentText: plain,
     }));
   };
 
@@ -63,9 +66,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({
     setIsTranslatingFull(true);
     try {
       if (doc.mode === "document") {
-        const translated = await translateDocument(doc.contentText, targetLang);
-        if (translated) {
-          handleDocumentTextChange(translated);
+        // Use translateRichHtml to keep 100% of tables, bold, italic, and tags!
+        const htmlToTranslate = doc.contentHtml || doc.contentText;
+        const translatedHtml = await translateRichHtml(htmlToTranslate, targetLang);
+        if (translatedHtml) {
+          handleDocumentHtmlChange(translatedHtml);
         } else {
           alert("Gagal menerjemahkan dokumen.");
         }
@@ -307,7 +312,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 }`}
               >
                 <FileText className="h-3.5 w-3.5" />
-                <span>Editor Teks</span>
+                <span>Dokumen &amp; Tabel Visual</span>
               </button>
               <button
                 type="button"
@@ -321,7 +326,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
                 }`}
               >
                 <FileSpreadsheet className="h-3.5 w-3.5" />
-                <span>Tabel Excel</span>
+                <span>Grid Lembar Kerja</span>
               </button>
             </div>
           )}
@@ -335,8 +340,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             />
           ) : (
             <DocumentEditor
-              content={doc.contentText}
-              onChange={handleDocumentTextChange}
+              htmlContent={doc.contentHtml || doc.contentText}
+              onChange={handleDocumentHtmlChange}
               onFullTranslate={handleFullTranslate}
               isTranslatingFull={isTranslatingFull}
             />
@@ -393,12 +398,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           >
             <div className="flex items-center gap-1.5 font-bold text-xs uppercase mb-2">
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Fitur Terjemahan</span>
+              <span>Format &amp; Terjemahan</span>
             </div>
             <ul className="space-y-2 text-[11px] opacity-80 leading-relaxed">
+              <li>• <b>Tabel, Bold, &amp; Italic:</b> Format visual (tabel, tebal, miring, judul, garis bawah) tetap dipertahankan 100% saat diedit maupun dikonversi.</li>
               <li>• <b>Pilih Kata / Kalimat:</b> Sorot teks pada dokumen, popup terjemah akan muncul otomatis untuk mengubah kata atau kalimat yang disorot saja.</li>
-              <li>• <b>Semua Dokumen:</b> Klik tombol &ldquo;Terjemahkan Dokumen&rdquo; di kanan atas toolbar untuk menerjemahkan seluruh isi berkas.</li>
-              <li>• <b>Tabel &amp; Spreadsheet:</b> Klik sel tertentu untuk menerjemahkan sel itu saja, atau terjemahkan satu kolom utuh secara instan.</li>
+              <li>• <b>Semua Dokumen:</b> Klik tombol &ldquo;Terjemahkan Dokumen&rdquo; di atas untuk menerjemahkan seluruh isi berkas tanpa merusak tabel dan tag HTML.</li>
             </ul>
           </div>
         </div>

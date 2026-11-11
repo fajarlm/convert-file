@@ -56,7 +56,48 @@ export const DropZone: React.FC<DropZoneProps> = ({ onDocumentLoaded }) => {
 
   const loadSample = (type: "pdf" | "xlsx" | "docx") => {
     if (type === "pdf") {
-      const sampleText = `LAPORAN EVALUASI & PENJUALAN PERUSAHAAN KUARTAL III\n\nPT Digital Nusantara Perkasa\nTanggal: 10 November 2026\n\nRingkasan Eksekutif:\nKinerja penjualan kuartal ini mencatatkan pertumbuhan signifikan sebesar 24% dibandingkan kuartal sebelumnya. Ekspansi ke pasar regional Asia Tenggara telah membuahkan hasil positif.\n\nRincian Metrik:\n- Total Pendapatan Operasional: Rp 450.000.000\n- Beban Pokok Penjualan: Rp 180.000.000\n- Laba Bersih Operasional: Rp 270.000.000\n- Kepuasan Pelanggan: 94.8%\n\nRekomendasi Strategis:\n1. Mengoptimalkan saluran pemasaran digital untuk meningkatkan konversi pengguna baru.\n2. Mempercepat otomatisasi proses konversi dan penerjemahan dokumen internal.\n3. Mempertahankan margin laba bersih di atas 20% pada kuartal mendatang.`;
+      const pdfHtml = `
+        <h2>LAPORAN EVALUASI &amp; PENJUALAN KUARTAL III</h2>
+        <p><b>PT Digital Nusantara Perkasa</b> • <i>Tanggal: 11 November 2026</i></p>
+        <p><b>Ringkasan Eksekutif:</b> Kinerja penjualan kuartal ini mencatatkan pertumbuhan signifikan sebesar <b>+24%</b> dibandingkan kuartal sebelumnya.</p>
+        <table border="1" style="width:100%; border-collapse:collapse; margin: 16px 0;">
+          <thead>
+            <tr style="background:#f4f4f5; font-weight:bold;">
+              <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">No</th>
+              <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">Metrik Keuangan</th>
+              <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">Nilai (IDR)</th>
+              <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">Pertumbuhan</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="border:1px solid #71717a; padding:8px 12px;">1</td>
+              <td style="border:1px solid #71717a; padding:8px 12px;">Total Pendapatan Operasional</td>
+              <td style="border:1px solid #71717a; padding:8px 12px;"><b>450.000.000</b></td>
+              <td style="border:1px solid #71717a; padding:8px 12px;"><i>+24%</i></td>
+            </tr>
+            <tr>
+              <td style="border:1px solid #71717a; padding:8px 12px;">2</td>
+              <td style="border:1px solid #71717a; padding:8px 12px;">Beban Pokok Penjualan</td>
+              <td style="border:1px solid #71717a; padding:8px 12px;"><b>180.000.000</b></td>
+              <td style="border:1px solid #71717a; padding:8px 12px;"><i>+5%</i></td>
+            </tr>
+            <tr>
+              <td style="border:1px solid #71717a; padding:8px 12px;">3</td>
+              <td style="border:1px solid #71717a; padding:8px 12px;">Laba Bersih Operasional</td>
+              <td style="border:1px solid #71717a; padding:8px 12px;"><b>270.000.000</b></td>
+              <td style="border:1px solid #71717a; padding:8px 12px;"><i>+38%</i></td>
+            </tr>
+          </tbody>
+        </table>
+        <p><b>Rekomendasi Strategis:</b></p>
+        <ul>
+          <li>Mengoptimalkan saluran pemasaran digital untuk meningkatkan konversi pengguna baru.</li>
+          <li>Mempertahankan margin laba bersih di atas 20% pada kuartal mendatang.</li>
+        </ul>
+      `;
+
+      const sampleText = `LAPORAN EVALUASI & PENJUALAN PERUSAHAAN KUARTAL III\n\nPT Digital Nusantara Perkasa\nTanggal: 11 November 2026\n\nRingkasan Eksekutif:\nKinerja penjualan kuartal ini mencatatkan pertumbuhan signifikan sebesar 24% dibandingkan kuartal sebelumnya.\n\nRincian Metrik:\n1. Total Pendapatan Operasional: Rp 450.000.000\n2. Beban Pokok Penjualan: Rp 180.000.000\n3. Laba Bersih Operasional: Rp 270.000.000`;
 
       const doc: LoadedDocument = {
         id: "sample-pdf",
@@ -72,10 +113,7 @@ export const DropZone: React.FC<DropZoneProps> = ({ onDocumentLoaded }) => {
           [3, "Laba Bersih Operasional", "270.000.000", "+38%"],
         ],
         sheetName: "Financial_Report",
-        contentHtml: sampleText
-          .split("\n")
-          .map((line) => `<p>${line || "&nbsp;"}</p>`)
-          .join(""),
+        contentHtml: pdfHtml,
         contentText: sampleText,
         history: [],
       };
@@ -103,7 +141,51 @@ export const DropZone: React.FC<DropZoneProps> = ({ onDocumentLoaded }) => {
       };
       onDocumentLoaded(doc);
     } else {
-      const docText = `PERJANJIAN KERJASAMA PENGEMBANGAN TEKNOLOGI\n\nNomor: 089/PKS/DN/XI/2026\n\nPada hari ini, Selasa tanggal 10 November 2026, telah disepakati perjanjian kerjasama antara:\n1. PIHAK PERTAMA: PT Inovasi Solusi Digital\n2. PIHAK KEDUA: Mitra Teknologi Rekayasa\n\nPasal 1: Ruang Lingkup Pekerjaan\nPIHAK PERTAMA menunjuk PIHAK KEDUA untuk membangun sistem otomatisasi konversi dokumen, penyuntingan langsung di browser, dan penerjemahan multi-bahasa berbasis AI.\n\nPasal 2: Jangka Waktu & Kerahasiaan Data\nSeluruh proses pengolahan dokumen dilakukan dengan standar keamanan data tinggi tanpa membocorkan isi berkas kepada pihak ketiga yang tidak berwenang.`;
+      const docHtml = `
+        <h2>PERJANJIAN KERJASAMA PENGEMBANGAN TEKNOLOGI</h2>
+        <p><b>Nomor:</b> 089/PKS/DN/XI/2026</p>
+        <p>Pada hari ini, telah disepakati perjanjian kerjasama antara <b>PIHAK PERTAMA</b> (<i>PT Inovasi Solusi Digital</i>) dan <b>PIHAK KEDUA</b> (<i>Mitra Rekayasa Teknologi</i>).</p>
+        
+        <h3><u>Rincian Komponen dan Spesifikasi Proyek</u></h3>
+        <table border="1" style="width:100%; border-collapse:collapse; margin: 16px 0;">
+          <thead>
+            <tr style="background:#f4f4f5; font-weight:bold;">
+              <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">No</th>
+              <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">Modul Sistem</th>
+              <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">Spesifikasi Format</th>
+              <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">Status Pengerjaan</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="border:1px solid #71717a; padding:8px 12px;">1</td>
+              <td style="border:1px solid #71717a; padding:8px 12px;"><b>Visual Rich Editor &amp; Tables</b></td>
+              <td style="border:1px solid #71717a; padding:8px 12px;"><i>Mempertahankan tabel, tebal, miring, judul</i></td>
+              <td style="border:1px solid #71717a; padding:8px 12px;">Terverifikasi</td>
+            </tr>
+            <tr>
+              <td style="border:1px solid #71717a; padding:8px 12px;">2</td>
+              <td style="border:1px solid #71717a; padding:8px 12px;"><b>Multi-Format Converter</b></td>
+              <td style="border:1px solid #71717a; padding:8px 12px;">Konversi silang DOCX, PDF, Excel, HTML</td>
+              <td style="border:1px solid #71717a; padding:8px 12px;">Selesai</td>
+            </tr>
+            <tr>
+              <td style="border:1px solid #71717a; padding:8px 12px;">3</td>
+              <td style="border:1px solid #71717a; padding:8px 12px;"><b>Neural Content Translator</b></td>
+              <td style="border:1px solid #71717a; padding:8px 12px;">Terjemah kata dan dokumen penuh</td>
+              <td style="border:1px solid #71717a; padding:8px 12px;">Aktif</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <p><b>Pasal 1: Ruang Lingkup Pekerjaan</b></p>
+        <p>PIHAK PERTAMA menunjuk PIHAK KEDUA untuk membangun sistem otomatisasi konversi dokumen, penyuntingan langsung di browser, dan penerjemahan multi-bahasa berbasis AI tanpa merusak format berkas asli.</p>
+        
+        <p><b>Pasal 2: Kerahasiaan Data &amp; Legalitas</b></p>
+        <p>Seluruh proses pengolahan dokumen dilakukan dengan standar keamanan tinggi tanpa membocorkan isi berkas kepada pihak ketiga.</p>
+      `;
+
+      const plainText = `PERJANJIAN KERJASAMA PENGEMBANGAN TEKNOLOGI\nNomor: 089/PKS/DN/XI/2026\n\nPada hari ini, telah disepakati perjanjian kerjasama antara PIHAK PERTAMA (PT Inovasi Solusi Digital) dan PIHAK KEDUA (Mitra Rekayasa Teknologi).\n\nModul Sistem:\n1. Visual Rich Editor & Tables - Mempertahankan tabel, tebal, miring, judul\n2. Multi-Format Converter - Konversi silang DOCX, PDF, Excel, HTML\n3. Neural Content Translator - Terjemah kata dan dokumen penuh`;
 
       const doc: LoadedDocument = {
         id: "sample-docx",
@@ -114,11 +196,8 @@ export const DropZone: React.FC<DropZoneProps> = ({ onDocumentLoaded }) => {
         mode: "document",
         sheetData: [],
         sheetName: "",
-        contentHtml: docText
-          .split("\n")
-          .map((line) => `<p>${line || "&nbsp;"}</p>`)
-          .join(""),
-        contentText: docText,
+        contentHtml: docHtml,
+        contentText: plainText,
         history: [],
       };
       onDocumentLoaded(doc);

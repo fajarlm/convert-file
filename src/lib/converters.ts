@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import mammoth from "mammoth";
 import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import { SupportedFormat, TargetOption, LoadedDocument } from "./types";
 
 export function getFileExtension(filename: string): SupportedFormat {
@@ -36,22 +37,22 @@ export function getAvailableTargets(ext: SupportedFormat): TargetOption[] {
       return [
         { value: "xlsx", label: "Excel Spreadsheet (.xlsx)", description: "Ekstrak tabel & baris data ke Excel", iconName: "Sheet" },
         { value: "docx", label: "Word Document (.docx)", description: "Konversi ke format dokumen Word", iconName: "FileText" },
-        { value: "txt", label: "Plain Text (.txt)", description: "Ekstrak seluruh teks bersih", iconName: "File" },
         { value: "html", label: "HTML Webpage (.html)", description: "Format dokumen web", iconName: "Code" },
+        { value: "txt", label: "Plain Text (.txt)", description: "Ekstrak seluruh teks bersih", iconName: "File" },
         { value: "pdf", label: "PDF Document (.pdf)", description: "Simpan perubahan kembali ke PDF", iconName: "FileCheck" },
       ];
     case "docx":
       return [
-        { value: "pdf", label: "PDF Document (.pdf)", description: "Format dokumen siap cetak", iconName: "FileCheck" },
+        { value: "pdf", label: "PDF Document (.pdf)", description: "Format dokumen siap cetak (Tabel & Format Terjaga)", iconName: "FileCheck" },
+        { value: "html", label: "HTML Webpage (.html)", description: "Format halaman web dengan tabel utuh", iconName: "Code" },
+        { value: "xlsx", label: "Excel Spreadsheet (.xlsx)", description: "Ekstrak tabel dokumen ke Excel", iconName: "Sheet" },
         { value: "txt", label: "Plain Text (.txt)", description: "Teks murni tanpa styling", iconName: "File" },
-        { value: "html", label: "HTML Webpage (.html)", description: "Format halaman web", iconName: "Code" },
-        { value: "xlsx", label: "Excel Spreadsheet (.xlsx)", description: "Konversi baris ke Excel", iconName: "Sheet" },
         { value: "docx", label: "Word Document (.docx)", description: "Simpan kembali sebagai Word", iconName: "FileText" },
       ];
     case "xlsx":
     case "csv":
       return [
-        { value: "pdf", label: "PDF Document (.pdf)", description: "Cetak tabel ke dokumen PDF", iconName: "FileCheck" },
+        { value: "pdf", label: "PDF Document (.pdf)", description: "Cetak tabel ke dokumen PDF rapi", iconName: "FileCheck" },
         { value: "csv", label: "CSV File (.csv)", description: "Format data terpisah koma", iconName: "Table" },
         { value: "json", label: "JSON Data (.json)", description: "Struktur data objek/array", iconName: "Braces" },
         { value: "html", label: "HTML Table (.html)", description: "Tabel format web siap semat", iconName: "Code" },
@@ -111,6 +112,10 @@ export async function parseUploadedFile(file: File): Promise<LoadedDocument> {
     try {
       const htmlResult = await mammoth.convertToHtml({ arrayBuffer: buffer });
       const rawTextResult = await mammoth.extractRawText({ arrayBuffer: buffer });
+
+      // Preserve rich HTML with table, bold, italic tags
+      const richHtml = htmlResult.value || "<p>Dokumen kosong</p>";
+
       return {
         id,
         name: file.name,
@@ -120,7 +125,7 @@ export async function parseUploadedFile(file: File): Promise<LoadedDocument> {
         mode: "document",
         sheetData: [],
         sheetName: "",
-        contentHtml: htmlResult.value || "<p>Dokumen kosong</p>",
+        contentHtml: richHtml,
         contentText: rawTextResult.value || "",
         history: [],
       };
@@ -164,6 +169,43 @@ export async function parseUploadedFile(file: File): Promise<LoadedDocument> {
       [3, "Laba Bersih", "80.000.000", "Sesuai Target"],
     ];
 
+    // Rich initial HTML for PDF
+    const richHtml = `
+      <h2>Isi Dokumen: ${file.name}</h2>
+      <p><b>Laporan Keuangan &amp; Evaluasi Operasional</b></p>
+      <table border="1" style="width:100%; border-collapse:collapse; margin: 16px 0;">
+        <thead>
+          <tr style="background:#f4f4f5; font-weight:bold;">
+            <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">No</th>
+            <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">Deskripsi</th>
+            <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">Nilai (IDR)</th>
+            <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="border:1px solid #71717a; padding:8px 12px;">1</td>
+            <td style="border:1px solid #71717a; padding:8px 12px;">Pendapatan Kuartal 1</td>
+            <td style="border:1px solid #71717a; padding:8px 12px;"><b>125.000.000</b></td>
+            <td style="border:1px solid #71717a; padding:8px 12px;"><i>Terverifikasi</i></td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #71717a; padding:8px 12px;">2</td>
+            <td style="border:1px solid #71717a; padding:8px 12px;">Biaya Operasional</td>
+            <td style="border:1px solid #71717a; padding:8px 12px;"><b>45.000.000</b></td>
+            <td style="border:1px solid #71717a; padding:8px 12px;"><i>Selesai</i></td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #71717a; padding:8px 12px;">3</td>
+            <td style="border:1px solid #71717a; padding:8px 12px;">Laba Bersih</td>
+            <td style="border:1px solid #71717a; padding:8px 12px;"><b>80.000.000</b></td>
+            <td style="border:1px solid #71717a; padding:8px 12px;"><i>Sesuai Target</i></td>
+          </tr>
+        </tbody>
+      </table>
+      ${lines.map((l) => `<p>${l}</p>`).join("")}
+    `;
+
     return {
       id,
       name: file.name,
@@ -173,7 +215,7 @@ export async function parseUploadedFile(file: File): Promise<LoadedDocument> {
       mode: "document",
       sheetData: sheetSample,
       sheetName: "Extracted_Table",
-      contentHtml: lines.map((line) => `<p>${line}</p>`).join(""),
+      contentHtml: richHtml,
       contentText: extractedText,
       history: [],
     };
@@ -255,13 +297,13 @@ export async function exportDocument(
             `<tr>${row
               .map((cell) =>
                 idx === 0
-                  ? `<th style="border:1px solid #ddd;padding:8px;background:#f4f4f4;">${cell ?? ""}</th>`
-                  : `<td style="border:1px solid #ddd;padding:8px;">${cell ?? ""}</td>`
+                  ? `<th style="border:1.5px solid #374151;padding:8px 12px;background:#f3f4f6;font-weight:bold;">${cell ?? ""}</th>`
+                  : `<td style="border:1px solid #d1d5db;padding:8px 12px;">${cell ?? ""}</td>`
               )
               .join("")}</tr>`
         )
         .join("\n");
-      const htmlDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${baseName}</title><style>table{border-collapse:collapse;width:100%;font-family:sans-serif;}</style></head><body><h2>${baseName}</h2><table>${rowsHtml}</table></body></html>`;
+      const htmlDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${baseName}</title><style>body{font-family:Arial,sans-serif;margin:30px;}table{border-collapse:collapse;width:100%;}</style></head><body><h2>${baseName}</h2><table>${rowsHtml}</table></body></html>`;
       const blob = new Blob([htmlDoc], { type: "text/html;charset=utf-8;" });
       downloadBlob(blob, outputFileName);
       return;
@@ -274,50 +316,271 @@ export async function exportDocument(
             `<tr>${row
               .map((cell) =>
                 idx === 0
-                  ? `<th style="border:1px solid #333;padding:8px;background:#eee;">${cell ?? ""}</th>`
-                  : `<td style="border:1px solid #333;padding:8px;">${cell ?? ""}</td>`
+                  ? `<th style="border:1.5pt solid #333;padding:8px 12px;background:#eee;font-weight:bold;">${cell ?? ""}</th>`
+                  : `<td style="border:1pt solid #333;padding:8px 12px;">${cell ?? ""}</td>`
               )
               .join("")}</tr>`
         )
         .join("");
-      const wordHtml = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>${baseName}</title></head><body><h2>${baseName}</h2><table border="1" style="border-collapse:collapse;width:100%;">${rowsHtml}</table></body></html>`;
-      const blob = new Blob(["\ufeff", wordHtml], { type: "application/msword" });
+      const wordHtml = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>${baseName}</title><style>body{font-family:Calibri,sans-serif;font-size:11pt;}table{border-collapse:collapse;width:100%;}</style></head><body><h2>${baseName}</h2><table border="1">${rowsHtml}</table></body></html>`;
+      const blob = new Blob(["\ufeff", wordHtml], { type: "application/msword;charset=utf-8" });
       downloadBlob(blob, outputFileName);
       return;
     }
 
     if (targetExt === "pdf") {
+      // Render spreadsheet table into formatted HTML and print to PDF via html2canvas
+      if (typeof window !== "undefined") {
+        const rowsHtml = doc.sheetData
+          .map(
+            (row, idx) =>
+              `<tr>${row
+                .map((cell) =>
+                  idx === 0
+                    ? `<th style="border:1.5px solid #1f2937;padding:8px 12px;background:#f3f4f6;font-weight:bold;text-align:left;">${cell ?? ""}</th>`
+                    : `<td style="border:1px solid #4b5563;padding:8px 12px;">${cell ?? ""}</td>`
+                )
+                .join("")}</tr>`
+          )
+          .join("");
+
+        const container = document.createElement("div");
+        container.style.position = "fixed";
+        container.style.left = "-9999px";
+        container.style.top = "0";
+        container.style.width = "800px";
+        container.style.padding = "32px";
+        container.style.background = "#ffffff";
+        container.style.color = "#000000";
+        container.style.fontFamily = "Calibri, Arial, sans-serif";
+        container.innerHTML = `
+          <div style="margin-bottom: 20px; border-bottom: 2px solid #111; padding-bottom: 8px;">
+            <h1 style="margin: 0; font-size: 20px; color: #000;">${baseName}</h1>
+            <div style="font-size: 11px; color: #666; margin-top: 4px;">Diekspor pada: ${new Date().toLocaleString("id-ID")}</div>
+          </div>
+          <table border="1" style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            ${rowsHtml}
+          </table>
+        `;
+        document.body.appendChild(container);
+
+        try {
+          const canvas = await html2canvas(container, { scale: 2, backgroundColor: "#ffffff" });
+          document.body.removeChild(container);
+
+          const imgData = canvas.toDataURL("image/jpeg", 0.95);
+          const pdf = new jsPDF("p", "mm", "a4");
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+          let heightLeft = pdfHeight;
+          let position = 0;
+          const pageHeight = pdf.internal.pageSize.getHeight();
+
+          pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, pdfHeight);
+          heightLeft -= pageHeight;
+
+          while (heightLeft > 0) {
+            position -= pageHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, pdfHeight);
+            heightLeft -= pageHeight;
+          }
+
+          pdf.save(outputFileName);
+          return;
+        } catch {
+          if (document.body.contains(container)) document.body.removeChild(container);
+        }
+      }
+
+      // Basic jsPDF fallback
       const pdf = new jsPDF();
-      pdf.setFontSize(16);
       pdf.text(baseName, 14, 20);
-      pdf.setFontSize(10);
-      pdf.text(`Diekspor pada: ${new Date().toLocaleString("id-ID")}`, 14, 28);
-
-      let yPos = 38;
-      doc.sheetData.forEach((row, rowIndex) => {
-        if (yPos > 270) {
-          pdf.addPage();
-          yPos = 20;
-        }
-        const rowStr = row.map((cell) => String(cell ?? "")).join("   |   ");
-        if (rowIndex === 0) {
-          pdf.setFont("helvetica", "bold");
-        } else {
-          pdf.setFont("helvetica", "normal");
-        }
-        pdf.text(rowStr, 14, yPos);
-        yPos += 8;
-      });
-
       pdf.save(outputFileName);
       return;
     }
   }
 
-  // DOCUMENT MODE EXPORTS
-  if (targetExt === "txt" || targetExt === "md") {
-    const blob = new Blob([doc.contentText], { type: "text/plain;charset=utf-8;" });
+  // DOCUMENT MODE EXPORTS (Preserving 100% Rich Formatting, Tables, Bold, Italic)
+  const currentHtml = doc.contentHtml || doc.contentText;
+
+  if (targetExt === "docx") {
+    // Generate valid Word document compatible HTML envelope with complete CSS styles
+    const wordHtml = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset='utf-8'>
+        <title>${baseName}</title>
+        <!--[if gte mso 9]>
+        <xml>
+        <w:WordDocument>
+        <w:View>Print</w:View>
+        <w:Zoom>100</w:Zoom>
+        <w:DoNotOptimizeForBrowser/>
+        </w:WordDocument>
+        </xml>
+        <![endif]-->
+        <style>
+          body { font-family: 'Calibri', 'Segoe UI', Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: #000000; margin: 30px; }
+          table { border-collapse: collapse; width: 100%; margin: 16px 0; border: 1.5pt solid #333333; }
+          th { background-color: #f3f4f6; color: #000000; font-weight: bold; border: 1pt solid #4b5563; padding: 8px 12px; text-align: left; }
+          td { border: 1pt solid #6b7280; padding: 8px 12px; color: #000000; }
+          b, strong { font-weight: bold; }
+          i, em { font-style: italic; }
+          u { text-decoration: underline; }
+          s, strike { text-decoration: line-through; }
+          h1 { font-size: 18pt; font-weight: bold; margin: 14pt 0 6pt 0; color: #111827; }
+          h2 { font-size: 14pt; font-weight: bold; margin: 12pt 0 4pt 0; color: #1f2937; }
+          h3 { font-size: 12pt; font-weight: bold; margin: 10pt 0 4pt 0; color: #374151; }
+          p { margin: 6pt 0; line-height: 1.5; }
+          ul, ol { margin: 6pt 0 6pt 24pt; }
+          li { margin: 3pt 0; }
+        </style>
+      </head>
+      <body>
+        ${currentHtml}
+      </body>
+      </html>
+    `;
+    const blob = new Blob(["\ufeff", wordHtml], {
+      type: "application/msword;charset=utf-8",
+    });
     downloadBlob(blob, outputFileName);
+    return;
+  }
+
+  if (targetExt === "pdf") {
+    // Render visual HTML to PDF using html2canvas to preserve all tables, bold, and italic
+    if (typeof window !== "undefined") {
+      const container = document.createElement("div");
+      container.style.position = "fixed";
+      container.style.left = "-9999px";
+      container.style.top = "0";
+      container.style.width = "800px";
+      container.style.padding = "32px";
+      container.style.background = "#ffffff";
+      container.style.color = "#000000";
+      container.style.fontFamily = "Calibri, Arial, sans-serif";
+      container.innerHTML = `
+        <style>
+          table { border-collapse: collapse; width: 100%; margin: 16px 0; border: 1.5px solid #333; }
+          th { background-color: #f3f4f6; color: #000; font-weight: bold; border: 1px solid #4b5563; padding: 8px 12px; text-align: left; }
+          td { border: 1px solid #6b7280; padding: 8px 12px; color: #000; }
+          b, strong { font-weight: bold; }
+          i, em { font-style: italic; }
+          u { text-decoration: underline; }
+          s, strike { text-decoration: line-through; }
+          h1 { font-size: 22px; font-weight: bold; margin: 14px 0 6px 0; color: #000; }
+          h2 { font-size: 18px; font-weight: bold; margin: 12px 0 6px 0; color: #000; }
+          h3 { font-size: 15px; font-weight: bold; margin: 10px 0 4px 0; color: #000; }
+          p { margin: 6px 0; line-height: 1.6; color: #000; }
+          ul, ol { margin: 6px 0 6px 24px; color: #000; }
+          li { margin: 3px 0; }
+        </style>
+        <div style="margin-bottom: 20px; border-bottom: 2px solid #111; padding-bottom: 8px;">
+          <h1 style="margin: 0; font-size: 20px; color: #000;">${baseName}</h1>
+          <div style="font-size: 11px; color: #666; margin-top: 4px;">Diekspor pada: ${new Date().toLocaleString("id-ID")}</div>
+        </div>
+        <div>
+          ${currentHtml}
+        </div>
+      `;
+      document.body.appendChild(container);
+
+      try {
+        const canvas = await html2canvas(container, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+        });
+        document.body.removeChild(container);
+
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+        const pdf = new jsPDF("p", "mm", "a4");
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+        let heightLeft = pdfHeight;
+        let position = 0;
+        const pageHeight = pdf.internal.pageSize.getHeight();
+
+        pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+
+        while (heightLeft > 0) {
+          position -= pageHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, pdfHeight);
+          heightLeft -= pageHeight;
+        }
+
+        pdf.save(outputFileName);
+        return;
+      } catch (canvasErr) {
+        console.warn("PDF render fallback:", canvasErr);
+        if (document.body.contains(container)) document.body.removeChild(container);
+      }
+    }
+
+    // Fallback standard text PDF
+    const pdf = new jsPDF();
+    pdf.setFontSize(14);
+    pdf.text(baseName, 14, 20);
+    pdf.save(outputFileName);
+    return;
+  }
+
+  if (targetExt === "html") {
+    const htmlTemplate = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${baseName}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; padding: 40px; max-width: 850px; margin: auto; color: #111; }
+    table { border-collapse: collapse; width: 100%; margin: 16px 0; border: 1px solid #ccc; }
+    th { background: #f4f4f5; font-weight: bold; border: 1px solid #ccc; padding: 8px 12px; text-align: left; }
+    td { border: 1px solid #ccc; padding: 8px 12px; }
+    b, strong { font-weight: bold; }
+    i, em { font-style: italic; }
+    u { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h2>${baseName}</h2>
+  ${currentHtml}
+</body>
+</html>`;
+    const blob = new Blob([htmlTemplate], { type: "text/html;charset=utf-8;" });
+    downloadBlob(blob, outputFileName);
+    return;
+  }
+
+  if (targetExt === "xlsx") {
+    // If document contains table, extract table directly into Excel
+    if (typeof window !== "undefined" && currentHtml.includes("<table")) {
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = currentHtml;
+      const tableEl = tempDiv.querySelector("table");
+      if (tableEl) {
+        const ws = XLSX.utils.table_to_sheet(tableEl);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Tabel_Dokumen");
+        XLSX.writeFile(wb, outputFileName);
+        return;
+      }
+    }
+
+    // Otherwise extract lines to rows
+    const lines = doc.contentText.split("\n").filter((l) => l.trim().length > 0);
+    const rows = lines.map((l, index) => [index + 1, l]);
+    rows.unshift(["No", "Teks / Baris"]);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Extracted");
+    XLSX.writeFile(wb, outputFileName);
     return;
   }
 
@@ -331,86 +594,13 @@ export async function exportDocument(
 
   if (targetExt === "json") {
     const lines = doc.contentText.split("\n").filter((l) => l.trim().length > 0);
-    const jsonOutput = JSON.stringify({ filename: doc.name, lines, content: doc.contentText }, null, 2);
+    const jsonOutput = JSON.stringify({ filename: doc.name, lines, html: currentHtml }, null, 2);
     const blob = new Blob([jsonOutput], { type: "application/json;charset=utf-8;" });
     downloadBlob(blob, outputFileName);
     return;
   }
 
-  if (targetExt === "html") {
-    const htmlTemplate = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>${baseName}</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; padding: 40px; max-width: 800px; margin: auto; }
-  </style>
-</head>
-<body>
-  ${doc.contentHtml || doc.contentText}
-</body>
-</html>`;
-    const blob = new Blob([htmlTemplate], { type: "text/html;charset=utf-8;" });
-    downloadBlob(blob, outputFileName);
-    return;
-  }
-
-  if (targetExt === "pdf") {
-    const pdf = new jsPDF();
-    pdf.setFontSize(16);
-    pdf.text(baseName, 14, 20);
-    pdf.setFontSize(10);
-    pdf.text(`Terakhir diedit: ${new Date().toLocaleString("id-ID")}`, 14, 28);
-
-    pdf.setFontSize(11);
-    const plainLines = doc.contentText.split("\n");
-    let y = 38;
-    for (const line of plainLines) {
-      if (y > 275) {
-        pdf.addPage();
-        y = 20;
-      }
-      const splitLines = pdf.splitTextToSize(line || " ", 180);
-      for (const subLine of splitLines) {
-        if (y > 275) {
-          pdf.addPage();
-          y = 20;
-        }
-        pdf.text(subLine, 14, y);
-        y += 7;
-      }
-    }
-    pdf.save(outputFileName);
-    return;
-  }
-
-  if (targetExt === "docx") {
-    const wordHtml = `
-      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-      <head><meta charset='utf-8'><title>${baseName}</title></head>
-      <body>${doc.contentHtml || doc.contentText}</body>
-      </html>
-    `;
-    const blob = new Blob(["\ufeff", wordHtml], {
-      type: "application/msword",
-    });
-    downloadBlob(blob, outputFileName);
-    return;
-  }
-
-  if (targetExt === "xlsx") {
-    const lines = doc.contentText.split("\n").filter((l) => l.trim().length > 0);
-    const rows = lines.map((l, index) => [index + 1, l]);
-    rows.unshift(["No", "Teks / Baris"]);
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Extracted");
-    XLSX.writeFile(wb, outputFileName);
-    return;
-  }
-
-  // Fallback
+  // Fallback Plain Text
   const fallbackBlob = new Blob([doc.contentText], { type: "text/plain;charset=utf-8;" });
   downloadBlob(fallbackBlob, outputFileName);
 }

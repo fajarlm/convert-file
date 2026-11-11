@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   Globe,
   Sparkles,
@@ -10,29 +10,39 @@ import {
   Type,
   Bold,
   Italic,
+  Underline,
+  Strikethrough,
   List,
+  ListOrdered,
+  Table as TableIcon,
+  Plus,
+  Trash2,
+  Heading1,
+  Heading2,
+  RotateCcw,
+  RotateCw,
 } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/lib/types";
 import { useAppTheme } from "@/context/ThemeContext";
 import { translateText } from "@/lib/translator";
 
 interface DocumentEditorProps {
-  content: string;
-  onChange: (newContent: string) => void;
+  htmlContent: string;
+  onChange: (newHtml: string) => void;
   onFullTranslate: (targetLang: string) => Promise<void>;
   isTranslatingFull: boolean;
 }
 
 export const DocumentEditor: React.FC<DocumentEditorProps> = ({
-  content,
+  htmlContent,
   onChange,
   onFullTranslate,
   isTranslatingFull,
 }) => {
   const { theme } = useAppTheme();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
   const [selectedText, setSelectedText] = useState("");
-  const [selectionRange, setSelectionRange] = useState<{ start: number; end: number } | null>(null);
+  const [savedRange, setSavedRange] = useState<Range | null>(null);
   const [bubblePosition, setBubblePosition] = useState<{ x: number; y: number } | null>(null);
 
   // Selection translation state
@@ -41,25 +51,50 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
   const [isTranslatingSelection, setIsTranslatingSelection] = useState(false);
   const [translatedSelection, setTranslatedSelection] = useState("");
 
-  const handleSelect = () => {
-    if (!textareaRef.current) return;
-    const start = textareaRef.current.selectionStart;
-    const end = textareaRef.current.selectionEnd;
-    const text = textareaRef.current.value.substring(start, end);
+  // Sync external HTML changes to editor innerHTML (initial load or full translate)
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.innerHTML !== htmlContent) {
+      editorRef.current.innerHTML = htmlContent;
+    }
+  }, [htmlContent]);
 
-    if (text.trim().length > 0) {
+  // Handle user input in contentEditable
+  const handleInput = useCallback(() => {
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML);
+    }
+  }, [onChange]);
+
+  // Handle text selection
+  const handleMouseUp = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) {
+      setSelectedText("");
+      setSavedRange(null);
+      setBubblePosition(null);
+      return;
+    }
+
+    const text = selection.toString().trim();
+    if (text.length > 0) {
+      const range = selection.getRangeAt(0);
+      setSavedRange(range.cloneRange());
       setSelectedText(text);
-      setSelectionRange({ start, end });
       setTranslatedSelection("");
 
-      const rect = textareaRef.current.getBoundingClientRect();
-      setBubblePosition({
-        x: Math.min(Math.max(rect.left + 30, 40), window.innerWidth - 340),
-        y: Math.max(rect.top - 8, 70),
-      });
+      const rect = range.getBoundingClientRect();
+      const editorRect = editorRef.current?.getBoundingClientRect();
+
+      const x = Math.min(
+        Math.max(rect.left, (editorRect?.left || 40) + 10),
+        window.innerWidth - 340
+      );
+      const y = Math.max(rect.top - 80, 70);
+
+      setBubblePosition({ x, y });
     } else {
       setSelectedText("");
-      setSelectionRange(null);
+      setSavedRange(null);
       setBubblePosition(null);
     }
   };
@@ -83,21 +118,37 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
   };
 
   const applyTranslatedSelection = () => {
-    if (!selectionRange || !translatedSelection) return;
-    const before = content.substring(0, selectionRange.start);
-    const after = content.substring(selectionRange.end);
-    const newContent = before + translatedSelection + after;
-    onChange(newContent);
+    if (!savedRange || !translatedSelection) return;
+
+    // Restore selection range
+    const selection = window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(savedRange);
+    }
+
+    // Replace selected range with translated text without destroying wrapping tags
+    savedRange.deleteContents();
+    const textNode = document.createTextNode(translatedSelection);
+    savedRange.insertNode(textNode);
+
+    // Update parent
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML);
+    }
+
+    // Reset bubble
     setSelectedText("");
-    setSelectionRange(null);
+    setSavedRange(null);
     setBubblePosition(null);
     setTranslatedSelection("");
   };
 
+  // Close floating bubble when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest("#translation-bubble") && !target.closest("#document-textarea")) {
+      if (!target.closest("#translation-bubble") && !target.closest("#document-editor-canvas")) {
         setBubblePosition(null);
       }
     };
@@ -105,12 +156,117 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
     return () => window.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const applyWrapFormat = (prefix: string, suffix: string = prefix) => {
-    if (!textareaRef.current || !selectionRange) return;
-    const before = content.substring(0, selectionRange.start);
-    const selected = content.substring(selectionRange.start, selectionRange.end);
-    const after = content.substring(selectionRange.end);
-    onChange(before + prefix + selected + suffix + after);
+  // Formatting commands
+  const execCmd = (cmd: string, val: string | undefined = undefined) => {
+    document.execCommand(cmd, false, val);
+    handleInput();
+  };
+
+  // Insert Table
+  const insertTable = () => {
+    const tableHtml = `
+      <table border="1" style="width:100%; border-collapse:collapse; margin: 16px 0;">
+        <thead>
+          <tr style="background:#f4f4f5; font-weight:bold;">
+            <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">No</th>
+            <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">Nama Kolom A</th>
+            <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">Nama Kolom B</th>
+            <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="border:1px solid #71717a; padding:8px 12px;">1</td>
+            <td style="border:1px solid #71717a; padding:8px 12px;">Data Baris 1</td>
+            <td style="border:1px solid #71717a; padding:8px 12px;">Nilai Format</td>
+            <td style="border:1px solid #71717a; padding:8px 12px;">Selesai</td>
+          </tr>
+          <tr>
+            <td style="border:1px solid #71717a; padding:8px 12px;">2</td>
+            <td style="border:1px solid #71717a; padding:8px 12px;">Data Baris 2</td>
+            <td style="border:1px solid #71717a; padding:8px 12px;">Nilai Format</td>
+            <td style="border:1px solid #71717a; padding:8px 12px;">Proses</td>
+          </tr>
+        </tbody>
+      </table>
+      <p><br/></p>
+    `;
+    execCmd("insertHTML", tableHtml);
+  };
+
+  // Add row to active table
+  const addTableRow = () => {
+    const selection = window.getSelection();
+    if (!selection || !selection.anchorNode) return;
+    const cell = (
+      selection.anchorNode.nodeType === Node.TEXT_NODE
+        ? selection.anchorNode.parentElement
+        : selection.anchorNode
+    ) as HTMLElement | null;
+    const row = cell?.closest("tr");
+    if (!row) {
+      alert("Letakkan kursor di dalam sel tabel terlebih dahulu.");
+      return;
+    }
+    const colsCount = row.children.length;
+    const newRow = document.createElement("tr");
+    for (let i = 0; i < colsCount; i++) {
+      const td = document.createElement("td");
+      td.style.border = "1px solid #71717a";
+      td.style.padding = "8px 12px";
+      td.innerHTML = "Baris baru";
+      newRow.appendChild(td);
+    }
+    row.parentNode?.insertBefore(newRow, row.nextSibling);
+    handleInput();
+  };
+
+  // Add column to active table
+  const addTableColumn = () => {
+    const selection = window.getSelection();
+    if (!selection || !selection.anchorNode) return;
+    const cell = (
+      selection.anchorNode.nodeType === Node.TEXT_NODE
+        ? selection.anchorNode.parentElement
+        : selection.anchorNode
+    ) as HTMLElement | null;
+    const table = cell?.closest("table");
+    if (!table) {
+      alert("Letakkan kursor di dalam tabel terlebih dahulu.");
+      return;
+    }
+    const rows = table.querySelectorAll("tr");
+    rows.forEach((r, idx) => {
+      const isHeader = idx === 0 && r.querySelector("th");
+      const newCell = document.createElement(isHeader ? "th" : "td");
+      newCell.style.border = "1px solid #71717a";
+      newCell.style.padding = "8px 12px";
+      if (isHeader) {
+        newCell.style.background = "#f4f4f5";
+        newCell.style.fontWeight = "bold";
+        newCell.innerHTML = "Kolom Baru";
+      } else {
+        newCell.innerHTML = "Data";
+      }
+      r.appendChild(newCell);
+    });
+    handleInput();
+  };
+
+  // Delete current table row
+  const deleteTableRow = () => {
+    const selection = window.getSelection();
+    if (!selection || !selection.anchorNode) return;
+    const cell = (
+      selection.anchorNode.nodeType === Node.TEXT_NODE
+        ? selection.anchorNode.parentElement
+        : selection.anchorNode
+    ) as HTMLElement | null;
+    const row = cell?.closest("tr");
+    if (row) {
+      row.remove();
+      handleInput();
+    }
   };
 
   const getContainerStyle = () => {
@@ -141,68 +297,167 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
     }
   };
 
+  const getBtnClass = () => {
+    if (theme === "retro") {
+      return "h-7 w-7 flex items-center justify-center bg-[#c0c0c0] border-t border-l border-t-white border-l-white border-b border-r border-b-black border-r-black text-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white font-bold cursor-pointer";
+    }
+    if (theme === "brutalist") {
+      return "h-7 w-7 flex items-center justify-center border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 cursor-pointer rounded";
+    }
+    return "h-7 w-7 flex items-center justify-center rounded hover:bg-current/10 cursor-pointer transition-colors";
+  };
+
   return (
     <div className={`relative flex flex-col h-full overflow-hidden ${getContainerStyle()}`}>
-      {/* Editor Toolbar */}
+      {/* Visual Rich Formatting Toolbar */}
       <div className={`flex flex-wrap items-center justify-between gap-3 ${getToolbarStyle()}`}>
-        <div className="flex items-center gap-1.5">
+        {/* Formatting Buttons */}
+        <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
-            onClick={() => applyWrapFormat("**")}
-            title="Tebal"
-            className={`flex h-7 w-7 items-center justify-center rounded cursor-pointer ${
-              theme === "retro"
-                ? "bg-[#c0c0c0] border-t border-l border-t-white border-l-white border-b border-r border-b-black border-r-black text-black font-bold active:border-t-black active:border-l-black active:border-b-white active:border-r-white"
-                : theme === "brutalist"
-                ? "border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000]"
-                : "hover:bg-white/10 hover:text-white"
-            }`}
+            onClick={() => execCmd("undo")}
+            title="Urungkan (Undo)"
+            className={getBtnClass()}
           >
-            <Bold className="h-3.5 w-3.5" />
+            <RotateCcw className="h-3.5 w-3.5" />
           </button>
           <button
             type="button"
-            onClick={() => applyWrapFormat("*")}
-            title="Miring"
-            className={`flex h-7 w-7 items-center justify-center rounded cursor-pointer ${
-              theme === "retro"
-                ? "bg-[#c0c0c0] border-t border-l border-t-white border-l-white border-b border-r border-b-black border-r-black text-black font-bold active:border-t-black active:border-l-black active:border-b-white active:border-r-white"
-                : theme === "brutalist"
-                ? "border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000]"
-                : "hover:bg-white/10 hover:text-white"
-            }`}
+            onClick={() => execCmd("redo")}
+            title="Ulangi (Redo)"
+            className={getBtnClass()}
+          >
+            <RotateCw className="h-3.5 w-3.5" />
+          </button>
+
+          <span className="h-4 w-px bg-current/20 mx-1" />
+
+          <button
+            type="button"
+            onClick={() => execCmd("bold")}
+            title="Tebal (Bold)"
+            className={getBtnClass()}
+          >
+            <Bold className="h-3.5 w-3.5 font-bold" />
+          </button>
+          <button
+            type="button"
+            onClick={() => execCmd("italic")}
+            title="Miring (Italic)"
+            className={getBtnClass()}
           >
             <Italic className="h-3.5 w-3.5" />
           </button>
           <button
             type="button"
-            onClick={() => applyWrapFormat("\n- ")}
+            onClick={() => execCmd("underline")}
+            title="Garis Bawah (Underline)"
+            className={getBtnClass()}
+          >
+            <Underline className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => execCmd("strikeThrough")}
+            title="Coret (Strikethrough)"
+            className={getBtnClass()}
+          >
+            <Strikethrough className="h-3.5 w-3.5" />
+          </button>
+
+          <span className="h-4 w-px bg-current/20 mx-1" />
+
+          <button
+            type="button"
+            onClick={() => execCmd("formatBlock", "<h1>")}
+            title="Judul Utama (H1)"
+            className={getBtnClass()}
+          >
+            <Heading1 className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => execCmd("formatBlock", "<h2>")}
+            title="Sub Judul (H2)"
+            className={getBtnClass()}
+          >
+            <Heading2 className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => execCmd("insertUnorderedList")}
             title="Daftar Poin"
-            className={`flex h-7 w-7 items-center justify-center rounded cursor-pointer ${
-              theme === "retro"
-                ? "bg-[#c0c0c0] border-t border-l border-t-white border-l-white border-b border-r border-b-black border-r-black text-black font-bold active:border-t-black active:border-l-black active:border-b-white active:border-r-white"
-                : theme === "brutalist"
-                ? "border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000]"
-                : "hover:bg-white/10 hover:text-white"
-            }`}
+            className={getBtnClass()}
           >
             <List className="h-3.5 w-3.5" />
           </button>
-          <span className="text-[11px] opacity-60 hidden sm:inline ml-2">
-            <Type className="inline h-3 w-3 mr-1" />
-            Sorot teks untuk terjemah instan kata/kalimat
-          </span>
+          <button
+            type="button"
+            onClick={() => execCmd("insertOrderedList")}
+            title="Daftar Angka"
+            className={getBtnClass()}
+          >
+            <ListOrdered className="h-3.5 w-3.5" />
+          </button>
+
+          <span className="h-4 w-px bg-current/20 mx-1" />
+
+          {/* Table Tools */}
+          <button
+            type="button"
+            onClick={insertTable}
+            title="Sisipkan Tabel Baru"
+            className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded cursor-pointer ${
+              theme === "retro"
+                ? "bg-[#c0c0c0] border-t border-l border-t-white border-l-white border-b border-r border-b-black border-r-black text-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white font-bold"
+                : theme === "brutalist"
+                ? "border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000]"
+                : "border border-current/20 hover:bg-current/10"
+            }`}
+          >
+            <TableIcon className="h-3.5 w-3.5 text-cyan-400" />
+            <span>+ Tabel</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={addTableRow}
+            title="Tambah Baris pada Tabel Aktif"
+            className="inline-flex items-center gap-0.5 px-1.5 py-1 text-[11px] rounded hover:bg-current/10 opacity-80 cursor-pointer"
+          >
+            <Plus className="h-3 w-3" /> Baris
+          </button>
+
+          <button
+            type="button"
+            onClick={addTableColumn}
+            title="Tambah Kolom pada Tabel Aktif"
+            className="inline-flex items-center gap-0.5 px-1.5 py-1 text-[11px] rounded hover:bg-current/10 opacity-80 cursor-pointer"
+          >
+            <Plus className="h-3 w-3" /> Kolom
+          </button>
+
+          <button
+            type="button"
+            onClick={deleteTableRow}
+            title="Hapus Baris Tabel Aktif"
+            className="inline-flex items-center gap-0.5 px-1.5 py-1 text-[11px] rounded hover:bg-rose-500/20 text-rose-400 opacity-80 cursor-pointer"
+          >
+            <Trash2 className="h-3 w-3" /> Hapus
+          </button>
         </div>
 
         {/* Full Document Translation Controls */}
         <div className="flex items-center gap-2">
-          <div className={`flex items-center gap-1.5 px-2 py-1 text-xs rounded-lg ${
-            theme === "retro"
-              ? "bg-white border-2 border-black text-black"
-              : theme === "brutalist"
-              ? "border-2 border-black bg-white text-black"
-              : "border border-white/10 bg-white/[0.04] text-zinc-300"
-          }`}>
+          <div
+            className={`flex items-center gap-1.5 px-2 py-1 text-xs rounded-lg ${
+              theme === "retro"
+                ? "bg-white border-2 border-black text-black"
+                : theme === "brutalist"
+                ? "border-2 border-black bg-white text-black"
+                : "border border-white/10 bg-white/[0.04] text-zinc-300"
+            }`}
+          >
             <Globe className="h-3.5 w-3.5 opacity-60" />
             <select
               value={fullTargetLang}
@@ -234,12 +489,12 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             {isTranslatingFull ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                <span>Menerjemahkan Dokumen...</span>
+                <span>Menerjemahkan Dokumen &amp; Tabel...</span>
               </>
             ) : (
               <>
                 <Sparkles className="h-3.5 w-3.5" />
-                <span>Terjemahkan Dokumen</span>
+                <span>Terjemahkan Dokumen (Pertahankan Format)</span>
               </>
             )}
           </button>
@@ -255,7 +510,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             left: `${bubblePosition.x}px`,
             top: `${bubblePosition.y}px`,
           }}
-          className={`z-50 flex flex-col gap-2 p-3 w-80 animate-in fade-in zoom-in-95 duration-100 ${
+          className={`z-50 flex flex-col gap-2 p-3 w-84 animate-in fade-in zoom-in-95 duration-100 ${
             theme === "retro"
               ? "bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black font-mono text-black shadow-2xl"
               : theme === "brutalist"
@@ -266,7 +521,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
           }`}
         >
           <div className="flex items-center justify-between border-b border-current/15 pb-1.5">
-            <span className="text-[11px] font-bold uppercase">Ganti Bahasa Kata/Kalimat Terpilih</span>
+            <span className="text-[11px] font-bold uppercase">Ganti Bahasa Kata / Kalimat Terpilih</span>
             <button onClick={() => setBubblePosition(null)} className="cursor-pointer">
               <X className="h-3.5 w-3.5" />
             </button>
@@ -308,33 +563,40 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
                 className="inline-flex items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-bold rounded bg-emerald-600 text-white hover:bg-emerald-500 cursor-pointer shadow-xs"
               >
                 <Check className="h-3.5 w-3.5" />
-                <span>Terapkan ke Dokumen</span>
+                <span>Terapkan ke Dokumen (Format Tetap)</span>
               </button>
             </div>
           )}
         </div>
       )}
 
-      {/* Main Textarea Canvas */}
-      <div className={`relative flex-1 p-6 ${theme === "retro" ? "bg-white text-black" : ""}`}>
-        <textarea
-          id="document-textarea"
-          ref={textareaRef}
-          value={content}
-          onChange={(e) => onChange(e.target.value)}
-          onSelect={handleSelect}
-          placeholder="Mulai menulis atau menyunting berkas di sini..."
-          className="w-full h-full min-h-[500px] resize-none border-none bg-transparent font-sans text-sm sm:text-base leading-relaxed focus:outline-hidden focus:ring-0"
+      {/* Main WYSIWYG Document Canvas */}
+      <div
+        className={`relative flex-1 p-6 sm:p-10 overflow-y-auto max-h-[680px] ${
+          theme === "retro" ? "bg-white text-black font-mono" : ""
+        }`}
+      >
+        <div
+          id="document-editor-canvas"
+          ref={editorRef}
+          contentEditable={true}
+          suppressContentEditableWarning={true}
+          onInput={handleInput}
+          onMouseUp={handleMouseUp}
+          onKeyUp={handleMouseUp}
+          className={`min-h-[500px] w-full max-w-4xl mx-auto focus:outline-hidden text-sm sm:text-base leading-relaxed ${
+            theme === "retro" ? "text-black" : ""
+          } [&_table]:border-collapse [&_table]:w-full [&_table]:my-4 [&_table]:border [&_table]:border-current/30 [&_th]:border [&_th]:border-current/30 [&_th]:p-2.5 [&_th]:font-bold [&_th]:bg-current/5 [&_td]:border [&_td]:border-current/30 [&_td]:p-2.5 [&_h1]:text-2xl [&_h1]:font-extrabold [&_h1]:my-4 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:my-3 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:my-2 [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline`}
         />
       </div>
 
       {/* Document Stats Footer */}
       <div className="flex items-center justify-between border-t border-current/10 px-4 py-2 text-[11px] opacity-70">
-        <div>
-          <span>{content.trim() ? content.trim().split(/\s+/).length : 0} kata</span> •{" "}
-          <span>{content.length} karakter</span>
+        <div className="flex items-center gap-2">
+          <Type className="h-3.5 w-3.5" />
+          <span>Editor Visual WYSIWYG • Format dokumen, tabel, tebal &amp; miring terjaga 100%</span>
         </div>
-        <div>Highlight kata atau kalimat tertentu untuk mengubah bahasa bagian tersebut</div>
+        <div>Highlight kata/kalimat apa saja untuk mengubah bahasa bagian tersebut</div>
       </div>
     </div>
   );
