@@ -35,11 +35,11 @@ export function getAvailableTargets(ext: SupportedFormat): TargetOption[] {
   switch (ext) {
     case "pdf":
       return [
-        { value: "xlsx", label: "Excel Spreadsheet (.xlsx)", description: "Ekstrak tabel & baris data ke Excel", iconName: "Sheet" },
         { value: "docx", label: "Word Document (.docx)", description: "Konversi ke format dokumen Word", iconName: "FileText" },
+        { value: "pdf", label: "PDF Document (.pdf)", description: "Simpan perubahan kembali ke PDF", iconName: "FileCheck" },
+        { value: "xlsx", label: "Excel Spreadsheet (.xlsx)", description: "Ekstrak tabel & baris data ke Excel", iconName: "Sheet" },
         { value: "html", label: "HTML Webpage (.html)", description: "Format dokumen web", iconName: "Code" },
         { value: "txt", label: "Plain Text (.txt)", description: "Ekstrak seluruh teks bersih", iconName: "File" },
-        { value: "pdf", label: "PDF Document (.pdf)", description: "Simpan perubahan kembali ke PDF", iconName: "FileCheck" },
       ];
     case "docx":
       return [
@@ -72,6 +72,111 @@ export function getAvailableTargets(ext: SupportedFormat): TargetOption[] {
         { value: "txt", label: "Plain Text (.txt)", description: "Simpan teks murni", iconName: "File" },
       ];
   }
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+async function extractTextFromPdf(
+  buffer: ArrayBuffer
+): Promise<{ text: string; html: string }> {
+  // Use pdfjs-dist legacy build for universal compatibility
+  const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+
+  const loadingTask = pdfjsLib.getDocument({
+    data: new Uint8Array(buffer),
+    disableFontFace: true,
+    useSystemFonts: true,
+  });
+
+  const pdfDoc = await loadingTask.promise;
+  const numPages = pdfDoc.numPages;
+  const allLines: string[] = [];
+  const htmlSections: string[] = [];
+
+  for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+    const page = await pdfDoc.getPage(pageNum);
+    const textContent = await page.getTextContent();
+
+    // Group text items by Y coordinate with a tolerance bucket of 3px
+    const linesByY = new Map<number, Array<{ str: string; x: number }>>();
+
+    for (const rawItem of textContent.items) {
+      if (!rawItem || typeof rawItem !== "object") continue;
+      const item = rawItem as { str?: string; transform?: number[] };
+      if (!item.str) continue;
+
+      const transform = item.transform;
+      const x = transform ? transform[4] : 0;
+      const y = transform ? Math.round(transform[5] / 3) * 3 : 0;
+
+      if (!linesByY.has(y)) {
+        linesByY.set(y, []);
+      }
+      linesByY.get(y)!.push({ str: item.str, x });
+    }
+
+    // Sort lines descending by Y (top of page to bottom of page)
+    const sortedYs = Array.from(linesByY.keys()).sort((a, b) => b - a);
+    const pageLines: string[] = [];
+
+    for (const y of sortedYs) {
+      const lineItems = linesByY.get(y)!;
+      // Sort items horizontally within the line (left to right)
+      lineItems.sort((a, b) => a.x - b.x);
+      const lineText = lineItems.map((i) => i.str).join(" ").trim();
+      if (lineText) {
+        pageLines.push(lineText);
+      }
+    }
+
+    if (pageLines.length > 0) {
+      allLines.push(...pageLines);
+
+      const pageHtml = pageLines
+        .map((line) => {
+          const escaped = escapeHtml(line);
+          const isHeading =
+            line.length <= 45 &&
+            (line === line.toUpperCase() ||
+              /^(ringkasan|summary|profil|profile|pengalaman|experience|pendidikan|education|keahlian|skills|kemampuan|proyek|projects|kontak|contact|sertifikasi|certifications)/i.test(
+                line.trim()
+              ));
+          if (isHeading) {
+            return `<h3><b>${escaped}</b></h3>`;
+          }
+          return `<p>${escaped}</p>`;
+        })
+        .join("");
+
+      if (numPages > 1) {
+        htmlSections.push(
+          `<div class="pdf-page" style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px dashed #d1d5db;">` +
+            `<div style="font-size: 11px; color: #6b7280; margin-bottom: 8px;">— Halaman ${pageNum} dari ${numPages} —</div>` +
+            `${pageHtml}</div>`
+        );
+      } else {
+        htmlSections.push(pageHtml);
+      }
+    }
+  }
+
+  const rawText = allLines.join("\n");
+  const fullHtml =
+    htmlSections.length > 0
+      ? htmlSections.join("\n")
+      : "<p>Tidak ditemukan teks yang dapat diekstrak dari dokumen PDF ini (dokumen mungkin berupa hasil scan gambar). Anda dapat mengetik langsung di sini.</p>";
+
+  return {
+    text: rawText || "Dokumen PDF kosong atau berbasis gambar scan.",
+    html: fullHtml,
+  };
 }
 
 export async function parseUploadedFile(file: File): Promise<LoadedDocument> {
@@ -149,76 +254,38 @@ export async function parseUploadedFile(file: File): Promise<LoadedDocument> {
   // 3. PDF format
   if (ext === "pdf") {
     const buffer = await file.arrayBuffer();
-    const decoder = new TextDecoder("utf-8");
-    const rawContent = decoder.decode(buffer);
-    
-    const matches = rawContent.match(/\((.*?)\)\s*Tj/g) || [];
-    let extractedText = matches
-      .map((m) => m.replace(/^\(/, "").replace(/\)\s*Tj$/, ""))
-      .join(" ");
+    try {
+      const { text, html } = await extractTextFromPdf(buffer);
 
-    if (!extractedText || extractedText.length < 10) {
-      extractedText = `Isi Dokumen PDF: ${file.name}\n\nLaporan Keuangan & Evaluasi Operasional\n\n1. Pendapatan Kuartal 1: Rp 125.000.000\n2. Biaya Operasional: Rp 45.000.000\n3. Laba Bersih: Rp 80.000.000\n\nCatatan: Teks di atas dapat langsung disunting, diterjemahkan sebagian atau seluruhnya, kemudian disimpan kembali ke PDF atau diekspor ke Excel / Word.`;
+      return {
+        id,
+        name: file.name,
+        size: file.size,
+        originalExtension: ext,
+        targetExtension: defaultTarget,
+        mode: "document",
+        sheetData: [],
+        sheetName: "",
+        contentHtml: html,
+        contentText: text,
+        history: [],
+      };
+    } catch (err) {
+      console.error("PDF parsing error:", err);
+      return {
+        id,
+        name: file.name,
+        size: file.size,
+        originalExtension: ext,
+        targetExtension: defaultTarget,
+        mode: "document",
+        sheetData: [],
+        sheetName: "",
+        contentHtml: `<p>Berhasil membaca file <b>${escapeHtml(file.name)}</b>. Silakan edit atau tambahkan isi dokumen di sini.</p>`,
+        contentText: `Berhasil membaca file ${file.name}.`,
+        history: [],
+      };
     }
-
-    const lines = extractedText.split("\n").filter((l) => l.trim().length > 0);
-    const sheetSample: (string | number)[][] = [
-      ["No", "Deskripsi", "Nilai (IDR)", "Status"],
-      [1, "Pendapatan Kuartal 1", "125.000.000", "Terverifikasi"],
-      [2, "Biaya Operasional", "45.000.000", "Selesai"],
-      [3, "Laba Bersih", "80.000.000", "Sesuai Target"],
-    ];
-
-    // Rich initial HTML for PDF
-    const richHtml = `
-      <h2>Isi Dokumen: ${file.name}</h2>
-      <p><b>Laporan Keuangan &amp; Evaluasi Operasional</b></p>
-      <table border="1" style="width:100%; border-collapse:collapse; margin: 16px 0;">
-        <thead>
-          <tr style="background:#f4f4f5; font-weight:bold;">
-            <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">No</th>
-            <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">Deskripsi</th>
-            <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">Nilai (IDR)</th>
-            <th style="border:1px solid #71717a; padding:8px 12px; text-align:left;">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style="border:1px solid #71717a; padding:8px 12px;">1</td>
-            <td style="border:1px solid #71717a; padding:8px 12px;">Pendapatan Kuartal 1</td>
-            <td style="border:1px solid #71717a; padding:8px 12px;"><b>125.000.000</b></td>
-            <td style="border:1px solid #71717a; padding:8px 12px;"><i>Terverifikasi</i></td>
-          </tr>
-          <tr>
-            <td style="border:1px solid #71717a; padding:8px 12px;">2</td>
-            <td style="border:1px solid #71717a; padding:8px 12px;">Biaya Operasional</td>
-            <td style="border:1px solid #71717a; padding:8px 12px;"><b>45.000.000</b></td>
-            <td style="border:1px solid #71717a; padding:8px 12px;"><i>Selesai</i></td>
-          </tr>
-          <tr>
-            <td style="border:1px solid #71717a; padding:8px 12px;">3</td>
-            <td style="border:1px solid #71717a; padding:8px 12px;">Laba Bersih</td>
-            <td style="border:1px solid #71717a; padding:8px 12px;"><b>80.000.000</b></td>
-            <td style="border:1px solid #71717a; padding:8px 12px;"><i>Sesuai Target</i></td>
-          </tr>
-        </tbody>
-      </table>
-      ${lines.map((l) => `<p>${l}</p>`).join("")}
-    `;
-
-    return {
-      id,
-      name: file.name,
-      size: file.size,
-      originalExtension: ext,
-      targetExtension: "xlsx",
-      mode: "document",
-      sheetData: sheetSample,
-      sheetName: "Extracted_Table",
-      contentHtml: richHtml,
-      contentText: extractedText,
-      history: [],
-    };
   }
 
   // 4. Text, Markdown, HTML, JSON

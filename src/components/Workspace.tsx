@@ -296,8 +296,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col lg:flex-row gap-6 p-4 sm:p-6 lg:p-8">
         {/* Editor Main Canvas */}
         <div className="flex-1 flex flex-col">
-          {/* View Tab Selector for PDF */}
-          {doc.originalExtension === "pdf" && (
+          {/* View Tab Selector for PDF (only shown if extracted tabular sheet data exists) */}
+          {doc.originalExtension === "pdf" && doc.sheetData && doc.sheetData.length > 0 && (
             <div className="flex items-center gap-2 mb-3 text-xs">
               <span className="opacity-60">Tampilan:</span>
               <button
