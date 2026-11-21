@@ -89,6 +89,10 @@ async function extractTextFromPdf(
   // Use pdfjs-dist legacy build for universal compatibility
   const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
 
+  if (typeof window !== "undefined" && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+  }
+
   const loadingTask = pdfjsLib.getDocument({
     data: new Uint8Array(buffer),
     disableFontFace: true,
