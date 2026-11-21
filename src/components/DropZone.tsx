@@ -7,7 +7,7 @@ import {
   FileText,
   FileCheck,
   FileType,
-  Sparkles,
+  Languages,
   ArrowRight,
 } from "lucide-react";
 import { LoadedDocument } from "@/lib/types";
@@ -295,7 +295,7 @@ export const DropZone: React.FC<DropZoneProps> = ({ onDocumentLoaded }) => {
       <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 rounded-xl border-3 border-black bg-[#FFE600] px-4 py-1.5 text-xs font-black uppercase text-black shadow-[4px_4px_0px_#000] rotate-[-1deg] mb-5">
-            <Sparkles className="h-4 w-4" />
+            <Languages className="h-4 w-4" />
             <span>Editor &amp; Converter All-In-One + AI Translate</span>
           </div>
           <h1 className="text-4xl font-black text-black sm:text-6xl uppercase leading-tight">
@@ -423,7 +423,7 @@ export const DropZone: React.FC<DropZoneProps> = ({ onDocumentLoaded }) => {
 
       <div className="text-center mb-12">
         <div className="inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-1.5 text-xs font-medium text-violet-300 shadow-[0_0_18px_-2px_rgba(168,85,247,0.35)] backdrop-blur-md mb-6">
-          <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+          <Languages className="h-3.5 w-3.5 text-cyan-400" />
           <span>Next-Generation Neural Document Studio</span>
         </div>
 

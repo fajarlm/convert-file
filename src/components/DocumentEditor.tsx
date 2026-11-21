@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   Globe,
-  Sparkles,
+  Languages,
   Loader2,
   Check,
   X,
@@ -21,10 +21,12 @@ import {
   Heading2,
   RotateCcw,
   RotateCw,
+  Wand2,
 } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/lib/types";
 import { useAppTheme } from "@/context/ThemeContext";
 import { translateText } from "@/lib/translator";
+import { formatDocumentWithAI } from "@/lib/formatter";
 
 interface DocumentEditorProps {
   htmlContent: string;
@@ -50,6 +52,23 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
   const [fullTargetLang, setFullTargetLang] = useState("en");
   const [isTranslatingSelection, setIsTranslatingSelection] = useState(false);
   const [translatedSelection, setTranslatedSelection] = useState("");
+  const [isFormattingAI, setIsFormattingAI] = useState(false);
+
+  const handleAIFormat = async () => {
+    setIsFormattingAI(true);
+    try {
+      const currentContent = editorRef.current?.innerHTML || htmlContent;
+      const formatted = await formatDocumentWithAI(currentContent);
+      if (formatted) {
+        onChange(formatted);
+      }
+    } catch (err) {
+      console.error("Gagal merapikan format:", err);
+      alert("Gagal merapikan format dokumen.");
+    } finally {
+      setIsFormattingAI(false);
+    }
+  };
 
   // Sync external HTML changes to editor innerHTML (initial load or full translate)
   useEffect(() => {
@@ -447,8 +466,39 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
           </button>
         </div>
 
-        {/* Full Document Translation Controls */}
-        <div className="flex items-center gap-2">
+        {/* AI Formatting & Translation Controls */}
+        <div className="flex items-center flex-wrap gap-2">
+          {/* AI Auto-Format Document */}
+          <button
+            type="button"
+            disabled={isFormattingAI}
+            onClick={handleAIFormat}
+            title="Rapikan format dokumen/CV otomatis: tata letak judul, kontak, poin & spasi dengan AI"
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer ${
+              theme === "retro"
+                ? "bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black text-black font-mono active:border-t-black active:border-l-black active:border-b-white active:border-r-white font-bold"
+                : theme === "brutalist"
+                ? "rounded-xl border-2 border-black bg-[#A7F3D0] text-black shadow-[2px_2px_0px_#000] font-black"
+                : theme === "minimal"
+                ? "rounded-lg bg-zinc-800 text-white hover:bg-zinc-700"
+                : "rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-xs hover:opacity-95"
+            }`}
+          >
+            {isFormattingAI ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <span>Merapikan Format (AI)...</span>
+              </>
+            ) : (
+              <>
+                <Wand2 className="h-3.5 w-3.5" />
+                <span>Rapikan Format (AI)</span>
+              </>
+            )}
+          </button>
+
+          <span className="h-4 w-px bg-current/20 mx-0.5" />
+
           <div
             className={`flex items-center gap-1.5 px-2 py-1 text-xs rounded-lg ${
               theme === "retro"
@@ -493,7 +543,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
               </>
             ) : (
               <>
-                <Sparkles className="h-3.5 w-3.5" />
+                <Languages className="h-3.5 w-3.5" />
                 <span>Terjemahkan Dokumen (Pertahankan Format)</span>
               </>
             )}
@@ -572,8 +622,14 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
 
       {/* Main WYSIWYG Document Canvas */}
       <div
-        className={`relative flex-1 p-6 sm:p-10 overflow-y-auto max-h-[680px] ${
-          theme === "retro" ? "bg-white text-black font-mono" : ""
+        className={`relative flex-1 p-4 sm:p-8 overflow-y-auto max-h-[750px] ${
+          theme === "retro"
+            ? "bg-[#c0c0c0] text-black font-mono"
+            : theme === "brutalist"
+            ? "bg-[#FFE600]/10 text-black"
+            : theme === "minimal"
+            ? "bg-zinc-100/90 text-zinc-900"
+            : "bg-[#0b141a]/95 text-white"
         }`}
       >
         <div
@@ -584,7 +640,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
           onInput={handleInput}
           onMouseUp={handleMouseUp}
           onKeyUp={handleMouseUp}
-          className={`min-h-[500px] w-full max-w-4xl mx-auto focus:outline-hidden text-sm sm:text-base leading-relaxed ${
+          className={`min-h-[500px] w-full max-w-5xl mx-auto focus:outline-hidden text-sm sm:text-base leading-relaxed ${
             theme === "retro" ? "text-black" : ""
           } [&_table]:border-collapse [&_table]:w-full [&_table]:my-4 [&_table]:border [&_table]:border-current/30 [&_th]:border [&_th]:border-current/30 [&_th]:p-2.5 [&_th]:font-bold [&_th]:bg-current/5 [&_td]:border [&_td]:border-current/30 [&_td]:p-2.5 [&_h1]:text-2xl [&_h1]:font-extrabold [&_h1]:my-4 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:my-3 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:my-2 [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline`}
         />

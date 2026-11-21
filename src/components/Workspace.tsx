@@ -16,7 +16,7 @@ import {
   FileSpreadsheet,
   FileText,
   RotateCcw,
-  Sparkles,
+  Languages,
   Settings2,
   FileDown,
 } from "lucide-react";
@@ -397,7 +397,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
             }`}
           >
             <div className="flex items-center gap-1.5 font-bold text-xs uppercase mb-2">
-              <Sparkles className="h-3.5 w-3.5" />
+              <Languages className="h-3.5 w-3.5" />
               <span>Format &amp; Terjemahan</span>
             </div>
             <ul className="space-y-2 text-[11px] opacity-80 leading-relaxed">

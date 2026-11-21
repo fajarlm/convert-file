@@ -5,7 +5,7 @@ import {
   Plus,
   Trash2,
   Globe,
-  Sparkles,
+  Languages,
   Loader2,
   Table as TableIcon,
   Columns3,
@@ -182,7 +182,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
                 {isTranslatingCell ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Sparkles className="h-3.5 w-3.5" />
+                  <Languages className="h-3.5 w-3.5" />
                 )}
                 <span>Terjemahkan Sel Ini</span>
               </button>
@@ -242,7 +242,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
               </>
             ) : (
               <>
-                <Sparkles className="h-3.5 w-3.5" />
+                <Languages className="h-3.5 w-3.5" />
                 <span>Terjemahkan Seluruh Lembar</span>
               </>
             )}

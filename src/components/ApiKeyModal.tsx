@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { KeyRound, Check, X, ShieldCheck, Sparkles, ExternalLink } from "lucide-react";
+import { KeyRound, Check, X, ShieldCheck, ExternalLink } from "lucide-react";
 import { getUserGeminiKey, setUserGeminiKey } from "@/lib/translator";
 import { useAppTheme } from "@/context/ThemeContext";
 
@@ -75,7 +75,7 @@ export const ApiKeyModal: React.FC = () => {
           >
             <div className="flex items-center justify-between border-b border-current/15 pb-3">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-cyan-400" />
+                <KeyRound className="h-4 w-4 text-cyan-400" />
                 <h3 className="font-bold text-sm sm:text-base">Pengaturan AI Gemini (Opsional)</h3>
               </div>
               <button

@@ -3,6 +3,7 @@ import mammoth from "mammoth";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { SupportedFormat, TargetOption, LoadedDocument } from "./types";
+import { smartFormatLocal } from "./formatter";
 
 export function getFileExtension(filename: string): SupportedFormat {
   const parts = filename.split(".");
@@ -101,81 +102,85 @@ async function extractTextFromPdf(
 
   const pdfDoc = await loadingTask.promise;
   const numPages = pdfDoc.numPages;
-  const allLines: string[] = [];
-  const htmlSections: string[] = [];
+  const allPageTexts: string[] = [];
 
   for (let pageNum = 1; pageNum <= numPages; pageNum++) {
     const page = await pdfDoc.getPage(pageNum);
-    const textContent = await page.getTextContent();
+    const unscaledViewport = page.getViewport({ scale: 1.0 });
 
-    // Group text items by Y coordinate with a tolerance bucket of 3px
-    const linesByY = new Map<number, Array<{ str: string; x: number }>>();
+    const textContent = await page.getTextContent();
+    const rawItems: Array<{
+      str: string;
+      x: number;
+      y: number;
+      fontSize: number;
+      isBold: boolean;
+    }> = [];
 
     for (const rawItem of textContent.items) {
       if (!rawItem || typeof rawItem !== "object") continue;
-      const item = rawItem as { str?: string; transform?: number[] };
-      if (!item.str) continue;
+      const item = rawItem as { str?: string; transform?: number[]; fontName?: string };
+      if (!item.str || !item.str.trim()) continue;
 
-      const transform = item.transform;
-      const x = transform ? transform[4] : 0;
-      const y = transform ? Math.round(transform[5] / 3) * 3 : 0;
+      const transform = item.transform || [1, 0, 0, 1, 0, 0];
+      const x = Math.round(transform[4]);
+      const y = Math.round(unscaledViewport.height - transform[5]);
+      const fontSize = Math.max(9, Math.round(Math.hypot(transform[0], transform[1])));
+      const fontName = (item.fontName || "").toLowerCase();
+      const isBold =
+        fontName.includes("bold") ||
+        fontName.includes("b1") ||
+        fontName.includes("b2") ||
+        fontName.includes("black") ||
+        fontName.includes("heavy") ||
+        fontSize >= 18;
 
-      if (!linesByY.has(y)) {
-        linesByY.set(y, []);
-      }
-      linesByY.get(y)!.push({ str: item.str, x });
+      rawItems.push({
+        str: item.str,
+        x,
+        y,
+        fontSize,
+        isBold,
+      });
     }
 
-    // Sort lines descending by Y (top of page to bottom of page)
-    const sortedYs = Array.from(linesByY.keys()).sort((a, b) => b - a);
-    const pageLines: string[] = [];
+    // Sort items top-to-bottom (y), then left-to-right (x)
+    rawItems.sort((a, b) => {
+      const yDiff = a.y - b.y;
+      if (Math.abs(yDiff) > 5) return yDiff;
+      return a.x - b.x;
+    });
 
-    for (const y of sortedYs) {
-      const lineItems = linesByY.get(y)!;
-      // Sort items horizontally within the line (left to right)
-      lineItems.sort((a, b) => a.x - b.x);
-      const lineText = lineItems.map((i) => i.str).join(" ").trim();
-      if (lineText) {
-        pageLines.push(lineText);
+    // Group items into logical lines based on similar y coordinate
+    const lineBuckets: Array<{ y: number; items: typeof rawItems }> = [];
+    for (const item of rawItems) {
+      const existing = lineBuckets.find((b) => Math.abs(b.y - item.y) <= 4);
+      if (existing) {
+        existing.items.push(item);
+      } else {
+        lineBuckets.push({ y: item.y, items: [item] });
+      }
+    }
+
+    // Sort buckets vertically
+    lineBuckets.sort((a, b) => a.y - b.y);
+
+    const pageLines: string[] = [];
+    for (const bucket of lineBuckets) {
+      bucket.items.sort((a, b) => a.x - b.x);
+      const lineStr = bucket.items.map((it) => it.str).join(" ").trim();
+      if (lineStr) {
+        pageLines.push(lineStr);
       }
     }
 
     if (pageLines.length > 0) {
-      allLines.push(...pageLines);
-
-      const pageHtml = pageLines
-        .map((line) => {
-          const escaped = escapeHtml(line);
-          const isHeading =
-            line.length <= 45 &&
-            (line === line.toUpperCase() ||
-              /^(ringkasan|summary|profil|profile|pengalaman|experience|pendidikan|education|keahlian|skills|kemampuan|proyek|projects|kontak|contact|sertifikasi|certifications)/i.test(
-                line.trim()
-              ));
-          if (isHeading) {
-            return `<h3><b>${escaped}</b></h3>`;
-          }
-          return `<p>${escaped}</p>`;
-        })
-        .join("");
-
-      if (numPages > 1) {
-        htmlSections.push(
-          `<div class="pdf-page" style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px dashed #d1d5db;">` +
-            `<div style="font-size: 11px; color: #6b7280; margin-bottom: 8px;">— Halaman ${pageNum} dari ${numPages} —</div>` +
-            `${pageHtml}</div>`
-        );
-      } else {
-        htmlSections.push(pageHtml);
-      }
+      allPageTexts.push(pageLines.join("\n"));
     }
   }
 
-  const rawText = allLines.join("\n");
-  const fullHtml =
-    htmlSections.length > 0
-      ? htmlSections.join("\n")
-      : "<p>Tidak ditemukan teks yang dapat diekstrak dari dokumen PDF ini (dokumen mungkin berupa hasil scan gambar). Anda dapat mengetik langsung di sini.</p>";
+  const rawText = allPageTexts.join("\n\n");
+  const fullHtml = smartFormatLocal(rawText);
 
   return {
     text: rawText || "Dokumen PDF kosong atau berbasis gambar scan.",
@@ -524,74 +529,117 @@ export async function exportDocument(
   if (targetExt === "pdf") {
     // Render visual HTML to PDF using html2canvas to preserve all tables, bold, and italic
     if (typeof window !== "undefined") {
-      const container = document.createElement("div");
-      container.style.position = "fixed";
-      container.style.left = "-9999px";
-      container.style.top = "0";
-      container.style.width = "800px";
-      container.style.padding = "32px";
-      container.style.background = "#ffffff";
-      container.style.color = "#000000";
-      container.style.fontFamily = "Calibri, Arial, sans-serif";
-      container.innerHTML = `
-        <style>
-          table { border-collapse: collapse; width: 100%; margin: 16px 0; border: 1.5px solid #333; }
-          th { background-color: #f3f4f6; color: #000; font-weight: bold; border: 1px solid #4b5563; padding: 8px 12px; text-align: left; }
-          td { border: 1px solid #6b7280; padding: 8px 12px; color: #000; }
-          b, strong { font-weight: bold; }
-          i, em { font-style: italic; }
-          u { text-decoration: underline; }
-          s, strike { text-decoration: line-through; }
-          h1 { font-size: 22px; font-weight: bold; margin: 14px 0 6px 0; color: #000; }
-          h2 { font-size: 18px; font-weight: bold; margin: 12px 0 6px 0; color: #000; }
-          h3 { font-size: 15px; font-weight: bold; margin: 10px 0 4px 0; color: #000; }
-          p { margin: 6px 0; line-height: 1.6; color: #000; }
-          ul, ol { margin: 6px 0 6px 24px; color: #000; }
-          li { margin: 3px 0; }
-        </style>
-        <div style="margin-bottom: 20px; border-bottom: 2px solid #111; padding-bottom: 8px;">
-          <h1 style="margin: 0; font-size: 20px; color: #000;">${baseName}</h1>
-          <div style="font-size: 11px; color: #666; margin-top: 4px;">Diekspor pada: ${new Date().toLocaleString("id-ID")}</div>
-        </div>
-        <div>
-          ${currentHtml}
-        </div>
-      `;
-      document.body.appendChild(container);
+      const tempDiv = document.createElement("div");
+      tempDiv.style.position = "fixed";
+      tempDiv.style.left = "-9999px";
+      tempDiv.style.top = "0";
+      tempDiv.style.width = "794px";
+      tempDiv.style.background = "#ffffff";
+      tempDiv.innerHTML = currentHtml;
+      document.body.appendChild(tempDiv);
 
-      try {
-        const canvas = await html2canvas(container, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-        });
-        document.body.removeChild(container);
+      const pageSheets = tempDiv.querySelectorAll<HTMLElement>(".pdf-page-sheet");
 
-        const imgData = canvas.toDataURL("image/jpeg", 0.95);
-        const pdf = new jsPDF("p", "mm", "a4");
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      if (pageSheets.length > 0) {
+        // High fidelity multi-page PDF sheet layout
+        try {
+          const pdf = new jsPDF("p", "mm", "a4");
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = pdf.internal.pageSize.getHeight();
 
-        let heightLeft = pdfHeight;
-        let position = 0;
-        const pageHeight = pdf.internal.pageSize.getHeight();
+          for (let i = 0; i < pageSheets.length; i++) {
+            const sheet = pageSheets[i];
+            const canvas = await html2canvas(sheet, {
+              scale: 2,
+              useCORS: true,
+              logging: false,
+              backgroundColor: "#ffffff",
+            });
+            const imgData = canvas.toDataURL("image/jpeg", 0.98);
 
-        pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, pdfHeight);
-        heightLeft -= pageHeight;
+            if (i > 0) {
+              pdf.addPage();
+            }
+            pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+          }
 
-        while (heightLeft > 0) {
-          position -= pageHeight;
-          pdf.addPage();
+          document.body.removeChild(tempDiv);
+          pdf.save(outputFileName);
+          return;
+        } catch (sheetErr) {
+          console.warn("Sheet render fallback:", sheetErr);
+          if (document.body.contains(tempDiv)) document.body.removeChild(tempDiv);
+        }
+      } else {
+        // Standard document layout without fake header banner
+        const container = document.createElement("div");
+        container.style.position = "fixed";
+        container.style.left = "-9999px";
+        container.style.top = "0";
+        container.style.width = "800px";
+        container.style.padding = "40px";
+        container.style.background = "#ffffff";
+        container.style.color = "#000000";
+        container.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+        container.innerHTML = `
+          <style>
+            table { border-collapse: collapse; width: 100%; margin: 16px 0; border: 1.5px solid #333; }
+            th { background-color: #f3f4f6; color: #000; font-weight: bold; border: 1px solid #4b5563; padding: 8px 12px; text-align: left; }
+            td { border: 1px solid #6b7280; padding: 8px 12px; color: #000; }
+            b, strong { font-weight: bold; }
+            i, em { font-style: italic; }
+            u { text-decoration: underline; }
+            s, strike { text-decoration: line-through; }
+            h1 { font-size: 24px; font-weight: bold; margin: 14px 0 6px 0; color: #000; }
+            h2 { font-size: 19px; font-weight: bold; margin: 12px 0 6px 0; color: #000; }
+            h3 { font-size: 16px; font-weight: bold; margin: 10px 0 4px 0; color: #000; }
+            p { margin: 6px 0; line-height: 1.6; color: #000; }
+            ul, ol { margin: 6px 0 6px 24px; color: #000; }
+            li { margin: 3px 0; }
+            .pdf-document-page { box-shadow: none !important; border: none !important; border-radius: 0 !important; max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+          </style>
+          <div>
+            ${currentHtml}
+          </div>
+        `;
+        document.body.appendChild(container);
+
+        try {
+          const canvas = await html2canvas(container, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: "#ffffff",
+          });
+          document.body.removeChild(container);
+          if (document.body.contains(tempDiv)) document.body.removeChild(tempDiv);
+
+          const imgData = canvas.toDataURL("image/jpeg", 0.95);
+          const pdf = new jsPDF("p", "mm", "a4");
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+          let heightLeft = pdfHeight;
+          let position = 0;
+          const pageHeight = pdf.internal.pageSize.getHeight();
+
           pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, pdfHeight);
           heightLeft -= pageHeight;
-        }
 
-        pdf.save(outputFileName);
-        return;
-      } catch (canvasErr) {
-        console.warn("PDF render fallback:", canvasErr);
-        if (document.body.contains(container)) document.body.removeChild(container);
+          while (heightLeft > 0) {
+            position -= pageHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, pdfHeight);
+            heightLeft -= pageHeight;
+          }
+
+          pdf.save(outputFileName);
+          return;
+        } catch (canvasErr) {
+          console.warn("PDF render fallback:", canvasErr);
+          if (document.body.contains(container)) document.body.removeChild(container);
+          if (document.body.contains(tempDiv)) document.body.removeChild(tempDiv);
+        }
       }
     }
 
