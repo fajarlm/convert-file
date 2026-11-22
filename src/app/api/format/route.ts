@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { content, preset: _preset } = body;
+    const { content } = body;
 
     const apiKey =
       req.headers.get("x-gemini-key") ||
@@ -26,7 +26,8 @@ Formatting Rules:
 4. Use <h2 style="font-size: 15px; font-weight: 700; text-transform: uppercase; color: #1e40af; border-bottom: 1.5px solid #bfdbfe; padding-bottom: 5px; margin-top: 24px; margin-bottom: 10px; letter-spacing: 0.5px;"> for section headers (e.g. Ringkasan, Pengalaman, Pendidikan, Keahlian).
 5. Convert bullet points and lists into semantic <ul style="margin: 6px 0 14px 24px; padding: 0; list-style-type: disc;"><li style="margin-bottom: 5px; font-size: 13.5px; line-height: 1.6; color: #374151;">...</li></ul>.
 6. Fix any mid-sentence line breaks caused by PDF extraction into smooth, natural paragraphs.
-7. Return ONLY the HTML code. Do NOT wrap in markdown code blocks (\`\`\`html) or include conversational text.
+7. CRITICAL: Preserve all <img> tags and their exact src (such as profile photo or logos) exactly as they are without deleting or changing them. If a profile photo exists, display it in the header beside the name/title.
+8. Return ONLY the HTML code. Do NOT wrap in markdown code blocks (\`\`\`html) or include conversational text.
 
 Document Text to Format:
 ${content}`;

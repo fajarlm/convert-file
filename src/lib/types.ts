@@ -25,6 +25,8 @@ export interface LoadedDocument {
   sheetName: string;
   // History
   history: string[];
+  // Extracted embedded images (base64 data URLs)
+  images?: string[];
 }
 
 export interface TargetOption {

@@ -10,7 +10,7 @@ import {
   Languages,
   ArrowRight,
 } from "lucide-react";
-import { LoadedDocument } from "@/lib/types";
+import { LoadedDocument, SupportedFormat } from "@/lib/types";
 import { parseUploadedFile } from "@/lib/converters";
 import { useAppTheme } from "@/context/ThemeContext";
 
@@ -28,12 +28,25 @@ export const DropZone: React.FC<DropZoneProps> = ({ onDocumentLoaded }) => {
     setIsLoading(true);
     try {
       const doc = await parseUploadedFile(file);
+      const targetOverride = fileInputRef.current?.dataset.targetExt as SupportedFormat | undefined;
+      if (targetOverride) {
+        doc.targetExtension = targetOverride;
+        if (fileInputRef.current) delete fileInputRef.current.dataset.targetExt;
+      }
       onDocumentLoaded(doc);
     } catch (err) {
       console.error("Gagal membaca file:", err);
       alert("Gagal membaca file. Pastikan format didukung.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleQuickTool = (targetExt: SupportedFormat, accept: string) => {
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = accept;
+      fileInputRef.current.dataset.targetExt = targetExt;
+      fileInputRef.current.click();
     }
   };
 
@@ -254,8 +267,45 @@ export const DropZone: React.FC<DropZoneProps> = ({ onDocumentLoaded }) => {
               </p>
             </div>
 
+            {/* Retro Quick Direct Converters */}
+            <div className="mt-5 border-t border-zinc-400 pt-3">
+              <span className="text-xs font-bold uppercase block mb-2">
+                Alat Konversi Populer (iLovePDF Style):
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                <button
+                  type="button"
+                  onClick={() => handleQuickTool("docx", ".pdf")}
+                  className="bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black px-2 py-2 text-xs font-bold text-center active:border-t-black active:border-l-black active:border-b-white active:border-r-white cursor-pointer"
+                >
+                  📄 PDF ➔ Word
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickTool("pdf", ".docx,.doc")}
+                  className="bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black px-2 py-2 text-xs font-bold text-center active:border-t-black active:border-l-black active:border-b-white active:border-r-white cursor-pointer"
+                >
+                  📝 Word ➔ PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickTool("xlsx", ".pdf")}
+                  className="bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black px-2 py-2 text-xs font-bold text-center active:border-t-black active:border-l-black active:border-b-white active:border-r-white cursor-pointer"
+                >
+                  📊 PDF ➔ Excel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickTool("pdf", ".xlsx,.xls,.csv")}
+                  className="bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black px-2 py-2 text-xs font-bold text-center active:border-t-black active:border-l-black active:border-b-white active:border-r-white cursor-pointer"
+                >
+                  📈 Excel ➔ PDF
+                </button>
+              </div>
+            </div>
+
             {/* Retro 1-Click Samples */}
-            <div className="mt-6 border-t border-zinc-400 pt-4">
+            <div className="mt-2 border-t border-zinc-400 pt-3">
               <span className="text-xs font-bold uppercase block mb-2">
                 Pilih Berkas Contoh (Direct Launch):
               </span>
@@ -485,7 +535,66 @@ export const DropZone: React.FC<DropZoneProps> = ({ onDocumentLoaded }) => {
         </div>
       </div>
 
-      <div className="mt-10 rounded-2xl border border-white/[0.08] bg-zinc-950/60 p-6 backdrop-blur-xl shadow-lg">
+      {/* Popular Direct Conversion Tools (iLovePDF Style) */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            Alat Konversi Populer (iLovePDF Style):
+          </span>
+          <span className="text-[11px] text-zinc-500">Klik untuk langsung memilih berkas</span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <button
+            type="button"
+            onClick={() => handleQuickTool("docx", ".pdf")}
+            className="flex flex-col items-start p-4 rounded-2xl border border-white/[0.08] bg-zinc-950/60 hover:border-indigo-500/50 hover:bg-zinc-900/40 transition-all text-left group cursor-pointer backdrop-blur-xl"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500/10 text-rose-400 mb-2.5 group-hover:scale-105 transition-transform">
+              <FileCheck className="h-5 w-5" />
+            </div>
+            <span className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors">PDF ke Word</span>
+            <span className="text-[11px] text-zinc-400 mt-0.5">Konversi .pdf ke .docx</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleQuickTool("pdf", ".docx,.doc")}
+            className="flex flex-col items-start p-4 rounded-2xl border border-white/[0.08] bg-zinc-950/60 hover:border-indigo-500/50 hover:bg-zinc-900/40 transition-all text-left group cursor-pointer backdrop-blur-xl"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 mb-2.5 group-hover:scale-105 transition-transform">
+              <FileText className="h-5 w-5" />
+            </div>
+            <span className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors">Word ke PDF</span>
+            <span className="text-[11px] text-zinc-400 mt-0.5">Konversi .docx ke .pdf</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleQuickTool("xlsx", ".pdf")}
+            className="flex flex-col items-start p-4 rounded-2xl border border-white/[0.08] bg-zinc-950/60 hover:border-indigo-500/50 hover:bg-zinc-900/40 transition-all text-left group cursor-pointer backdrop-blur-xl"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 mb-2.5 group-hover:scale-105 transition-transform">
+              <FileSpreadsheet className="h-5 w-5" />
+            </div>
+            <span className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors">PDF ke Excel</span>
+            <span className="text-[11px] text-zinc-400 mt-0.5">Ekstrak tabel ke .xlsx</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleQuickTool("pdf", ".xlsx,.xls,.csv")}
+            className="flex flex-col items-start p-4 rounded-2xl border border-white/[0.08] bg-zinc-950/60 hover:border-indigo-500/50 hover:bg-zinc-900/40 transition-all text-left group cursor-pointer backdrop-blur-xl"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 mb-2.5 group-hover:scale-105 transition-transform">
+              <FileCheck className="h-5 w-5" />
+            </div>
+            <span className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors">Excel ke PDF</span>
+            <span className="text-[11px] text-zinc-400 mt-0.5">Cetak tabel ke .pdf</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-8 rounded-2xl border border-white/[0.08] bg-zinc-950/60 p-6 backdrop-blur-xl shadow-lg">
         <div className="flex items-center justify-between gap-2 mb-4">
           <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Coba Cepat Berkas Contoh:</span>
         </div>

@@ -16,6 +16,7 @@ import { translateText, translateBatch } from "@/lib/translator";
 
 interface SpreadsheetEditorProps {
   data: (string | number)[][];
+  images?: string[];
   onChange: (newData: (string | number)[][]) => void;
   onFullTranslate: (targetLang: string) => Promise<void>;
   isTranslatingFull: boolean;
@@ -23,6 +24,7 @@ interface SpreadsheetEditorProps {
 
 export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
   data,
+  images,
   onChange,
   onFullTranslate,
   isTranslatingFull,
@@ -249,6 +251,24 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Embedded File Images Preview (if any) */}
+      {images && images.length > 0 && (
+        <div className="flex items-center gap-3 px-4 py-2 bg-black/5 dark:bg-white/5 border-b border-current/15 overflow-x-auto shrink-0">
+          <span className="text-[11px] font-bold opacity-75 shrink-0">Foto / Gambar Terdeteksi ({images.length}):</span>
+          <div className="flex items-center gap-2">
+            {images.map((src, i) => (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                key={i}
+                src={src}
+                alt={`Gambar ${i + 1}`}
+                className="h-10 w-auto max-w-24 object-contain rounded border border-current/20 bg-white"
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Grid Canvas Table */}
       <div className={`flex-1 overflow-auto max-h-[580px] ${theme === "retro" ? "bg-white text-black" : ""}`}>

@@ -334,6 +334,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({
           {doc.mode === "spreadsheet" ? (
             <SpreadsheetEditor
               data={doc.sheetData}
+              images={doc.images}
               onChange={handleSpreadsheetChange}
               onFullTranslate={handleFullTranslate}
               isTranslatingFull={isTranslatingFull}

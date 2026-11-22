@@ -22,6 +22,13 @@ import {
   RotateCcw,
   RotateCw,
   Wand2,
+  ImagePlus,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  Printer,
+  RemoveFormatting,
 } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/lib/types";
 import { useAppTheme } from "@/context/ThemeContext";
@@ -68,6 +75,61 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
     } finally {
       setIsFormattingAI(false);
     }
+  };
+
+  const imageUploadRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        if (editorRef.current) {
+          editorRef.current.focus();
+          document.execCommand("insertImage", false, dataUrl);
+          onChange(editorRef.current.innerHTML);
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handlePrint = () => {
+    if (typeof window === "undefined" || !editorRef.current) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Cetak Dokumen - DocMorph</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 40px; color: #000; margin: 0; }
+            table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+            th, td { border: 1px solid #333; padding: 8px 12px; }
+            th { background: #f4f4f5; font-weight: bold; }
+            img { max-width: 100%; height: auto; }
+            @page { margin: 15mm; }
+          </style>
+        </head>
+        <body>
+          ${editorRef.current.innerHTML}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
   };
 
   // Sync external HTML changes to editor innerHTML (initial load or full translate)
@@ -386,6 +448,42 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
 
           <span className="h-4 w-px bg-current/20 mx-1" />
 
+          {/* Text Alignment Tools */}
+          <button
+            type="button"
+            onClick={() => execCmd("justifyLeft")}
+            title="Rata Kiri"
+            className={getBtnClass()}
+          >
+            <AlignLeft className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => execCmd("justifyCenter")}
+            title="Rata Tengah"
+            className={getBtnClass()}
+          >
+            <AlignCenter className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => execCmd("justifyRight")}
+            title="Rata Kanan"
+            className={getBtnClass()}
+          >
+            <AlignRight className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => execCmd("justifyFull")}
+            title="Rata Kiri Kanan (Justify)"
+            className={getBtnClass()}
+          >
+            <AlignJustify className="h-3.5 w-3.5" />
+          </button>
+
+          <span className="h-4 w-px bg-current/20 mx-1" />
+
           <button
             type="button"
             onClick={() => execCmd("formatBlock", "<h1>")}
@@ -463,6 +561,52 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             className="inline-flex items-center gap-0.5 px-1.5 py-1 text-[11px] rounded hover:bg-rose-500/20 text-rose-400 opacity-80 cursor-pointer"
           >
             <Trash2 className="h-3 w-3" /> Hapus
+          </button>
+
+          <span className="h-4 w-px bg-current/20 mx-1" />
+
+          {/* Photo / Image Upload Tool */}
+          <button
+            type="button"
+            onClick={() => imageUploadRef.current?.click()}
+            title="Sisipkan Foto atau Gambar ke Dokumen"
+            className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded cursor-pointer ${
+              theme === "retro"
+                ? "bg-[#c0c0c0] border-t border-l border-t-white border-l-white border-b border-r border-b-black border-r-black text-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white font-bold"
+                : theme === "brutalist"
+                ? "border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000]"
+                : "border border-current/20 hover:bg-current/10"
+            }`}
+          >
+            <ImagePlus className="h-3.5 w-3.5 text-emerald-500" />
+            <span>+ Foto</span>
+          </button>
+          <input
+            type="file"
+            ref={imageUploadRef}
+            onChange={handleImageUpload}
+            accept="image/*"
+            className="hidden"
+          />
+
+          <span className="h-4 w-px bg-current/20 mx-1" />
+
+          {/* Utility Tools: Clear Format & Print */}
+          <button
+            type="button"
+            onClick={() => execCmd("removeFormat")}
+            title="Bersihkan Format Teks"
+            className={getBtnClass()}
+          >
+            <RemoveFormatting className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={handlePrint}
+            title="Cetak Dokumen Langsung (Print)"
+            className={getBtnClass()}
+          >
+            <Printer className="h-3.5 w-3.5" />
           </button>
         </div>
 
@@ -642,7 +786,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
           onKeyUp={handleMouseUp}
           className={`min-h-[500px] w-full max-w-5xl mx-auto focus:outline-hidden text-sm sm:text-base leading-relaxed ${
             theme === "retro" ? "text-black" : ""
-          } [&_table]:border-collapse [&_table]:w-full [&_table]:my-4 [&_table]:border [&_table]:border-current/30 [&_th]:border [&_th]:border-current/30 [&_th]:p-2.5 [&_th]:font-bold [&_th]:bg-current/5 [&_td]:border [&_td]:border-current/30 [&_td]:p-2.5 [&_h1]:text-2xl [&_h1]:font-extrabold [&_h1]:my-4 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:my-3 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:my-2 [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline`}
+          } [&_table]:border-collapse [&_table]:w-full [&_table]:my-4 [&_table]:border [&_table]:border-current/30 [&_th]:border [&_th]:border-current/30 [&_th]:p-2.5 [&_th]:font-bold [&_th]:bg-current/5 [&_td]:border [&_td]:border-current/30 [&_td]:p-2.5 [&_h1]:text-2xl [&_h1]:font-extrabold [&_h1]:my-4 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:my-3 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:my-2 [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline [&_img]:max-w-full [&_img]:h-auto [&_img]:inline-block`}
         />
       </div>
 

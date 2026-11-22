@@ -3,7 +3,7 @@ import mammoth from "mammoth";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { SupportedFormat, TargetOption, LoadedDocument } from "./types";
-import { smartFormatLocal } from "./formatter";
+import { smartFormatLocal, ExtractedImage } from "./formatter";
 
 export function getFileExtension(filename: string): SupportedFormat {
   const parts = filename.split(".");
@@ -84,9 +84,78 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#039;");
 }
 
+interface PdfImageObject {
+  width: number;
+  height: number;
+  data?: Uint8ClampedArray | Uint8Array;
+  bitmap?: ImageBitmap;
+  kind?: number;
+}
+
+function convertPdfImageToDataUrl(imgObj: PdfImageObject | null | undefined): string | null {
+  if (!imgObj || !imgObj.width || !imgObj.height) return null;
+  const { width, height } = imgObj;
+
+  if (typeof document === "undefined") return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  try {
+    // 1. If high-performance ImageBitmap exists, draw directly
+    if (imgObj.bitmap) {
+      ctx.drawImage(imgObj.bitmap, 0, 0);
+      return canvas.toDataURL("image/png");
+    }
+
+    if (!imgObj.data) return null;
+    const { data, kind } = imgObj;
+    const totalPixels = width * height;
+    let imgData: ImageData;
+
+    if (data.length === totalPixels * 4 || kind === 3) {
+      imgData = new ImageData(new Uint8ClampedArray(data), width, height);
+    } else if (data.length === totalPixels * 3 || kind === 2) {
+      // 24-bit RGB -> 32-bit RGBA
+      const rgba = new Uint8ClampedArray(totalPixels * 4);
+      let s = 0;
+      let d = 0;
+      for (let p = 0; p < totalPixels; p++) {
+        rgba[d++] = data[s++];
+        rgba[d++] = data[s++];
+        rgba[d++] = data[s++];
+        rgba[d++] = 255;
+      }
+      imgData = new ImageData(rgba, width, height);
+    } else if (data.length === totalPixels || kind === 1) {
+      // 8-bit Grayscale -> RGBA
+      const rgba = new Uint8ClampedArray(totalPixels * 4);
+      let d = 0;
+      for (let p = 0; p < totalPixels; p++) {
+        const val = data[p];
+        rgba[d++] = val;
+        rgba[d++] = val;
+        rgba[d++] = val;
+        rgba[d++] = 255;
+      }
+      imgData = new ImageData(rgba, width, height);
+    } else {
+      imgData = new ImageData(new Uint8ClampedArray(data), width, height);
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+    return canvas.toDataURL("image/png");
+  } catch (err) {
+    console.warn("Canvas ImageData conversion error:", err);
+    return null;
+  }
+}
+
 async function extractTextFromPdf(
   buffer: ArrayBuffer
-): Promise<{ text: string; html: string }> {
+): Promise<{ text: string; html: string; images: string[] }> {
   // Use pdfjs-dist legacy build for universal compatibility
   const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
 
@@ -103,11 +172,24 @@ async function extractTextFromPdf(
   const pdfDoc = await loadingTask.promise;
   const numPages = pdfDoc.numPages;
   const allPageTexts: string[] = [];
+  const allExtractedImages: ExtractedImage[] = [];
+
+  function multiplyTransforms(m1: number[], m2: number[]): number[] {
+    return [
+      m1[0] * m2[0] + m1[2] * m2[1],
+      m1[1] * m2[0] + m1[3] * m2[1],
+      m1[0] * m2[2] + m1[2] * m2[3],
+      m1[1] * m2[2] + m1[3] * m2[3],
+      m1[0] * m2[4] + m1[2] * m2[5] + m1[4],
+      m1[1] * m2[4] + m1[3] * m2[5] + m1[5],
+    ];
+  }
 
   for (let pageNum = 1; pageNum <= numPages; pageNum++) {
     const page = await pdfDoc.getPage(pageNum);
     const unscaledViewport = page.getViewport({ scale: 1.0 });
 
+    // 1. Structured Text extraction
     const textContent = await page.getTextContent();
     const rawItems: Array<{
       str: string;
@@ -162,7 +244,6 @@ async function extractTextFromPdf(
       }
     }
 
-    // Sort buckets vertically
     lineBuckets.sort((a, b) => a.y - b.y);
 
     const pageLines: string[] = [];
@@ -177,14 +258,83 @@ async function extractTextFromPdf(
     if (pageLines.length > 0) {
       allPageTexts.push(pageLines.join("\n"));
     }
+
+    // 2. High-Fidelity Image Extraction (Photos, Avatars, Logos, Figures)
+    try {
+      const opList = await page.getOperatorList();
+      const matrixStack: number[][] = [[1, 0, 0, 1, 0, 0]];
+      let currentMatrix = [1, 0, 0, 1, 0, 0];
+
+      for (let i = 0; i < opList.fnArray.length; i++) {
+        const fn = opList.fnArray[i];
+        const args = opList.argsArray[i];
+
+        if (fn === pdfjsLib.OPS.save) {
+          matrixStack.push([...currentMatrix]);
+        } else if (fn === pdfjsLib.OPS.restore) {
+          if (matrixStack.length > 0) {
+            currentMatrix = matrixStack.pop()!;
+          }
+        } else if (fn === pdfjsLib.OPS.transform) {
+          if (args && args.length === 6) {
+            currentMatrix = multiplyTransforms(currentMatrix, args);
+          }
+        } else if (
+          fn === pdfjsLib.OPS.paintImageXObject ||
+          fn === pdfjsLib.OPS.paintInlineImageXObject
+        ) {
+          const imgId = args[0];
+          try {
+            let timer: ReturnType<typeof setTimeout> | undefined;
+            const imgObj = await new Promise<PdfImageObject | null>((resolve) => {
+              const direct = page.objs.get(imgId);
+              if (direct && (direct.data || direct.bitmap)) return resolve(direct as PdfImageObject);
+              page.objs.get(imgId, (obj: PdfImageObject) => {
+                if (timer) clearTimeout(timer);
+                resolve(obj);
+              });
+              timer = setTimeout(() => resolve(null), 1200);
+            });
+            if (timer) clearTimeout(timer);
+
+            if (imgObj && imgObj.width && imgObj.height && (imgObj.data || imgObj.bitmap)) {
+              const dataUrl = convertPdfImageToDataUrl(imgObj);
+              if (dataUrl) {
+                const imgW = Math.round(Math.hypot(currentMatrix[0], currentMatrix[1]));
+                const imgH = Math.round(Math.hypot(currentMatrix[2], currentMatrix[3]));
+                const yBottom = currentMatrix[5];
+                const topDist = Math.round(unscaledViewport.height - (yBottom + imgH));
+
+                // Filter out 1x1 tracking dots or tiny divider lines (< 8px)
+                if (imgObj.width >= 8 && imgObj.height >= 8 && imgW >= 8 && imgH >= 8) {
+                  allExtractedImages.push({
+                    dataUrl,
+                    x: Math.max(0, Math.round(currentMatrix[4])),
+                    y: Math.max(0, topDist),
+                    width: imgW,
+                    height: imgH,
+                    isHeader: topDist < 350,
+                  });
+                }
+              }
+            }
+          } catch (imgErr) {
+            console.warn("Failed to extract image " + imgId, imgErr);
+          }
+        }
+      }
+    } catch (opErr) {
+      console.warn("Operator list processing error:", opErr);
+    }
   }
 
   const rawText = allPageTexts.join("\n\n");
-  const fullHtml = smartFormatLocal(rawText);
+  const fullHtml = smartFormatLocal(rawText, allExtractedImages);
 
   return {
     text: rawText || "Dokumen PDF kosong atau berbasis gambar scan.",
     html: fullHtml,
+    images: allExtractedImages.map((img) => img.dataUrl),
   };
 }
 
@@ -205,6 +355,25 @@ export async function parseUploadedFile(file: File): Promise<LoadedDocument> {
       defval: "",
     }) as (string | number)[][]) || [["", ""]];
 
+    const excelImages: string[] = [];
+    if (ext === "xlsx") {
+      try {
+        const JSZip = (await import("jszip")).default;
+        const zip = await JSZip.loadAsync(buffer);
+        const mediaFiles = Object.keys(zip.files).filter(
+          (p) => p.startsWith("xl/media/") && !zip.files[p].dir
+        );
+        for (const p of mediaFiles) {
+          const fileExt = p.split(".").pop()?.toLowerCase() || "png";
+          const mime = fileExt === "jpg" || fileExt === "jpeg" ? "image/jpeg" : "image/png";
+          const base64 = await zip.files[p].async("base64");
+          excelImages.push(`data:${mime};base64,${base64}`);
+        }
+      } catch (zipErr) {
+        console.warn("Excel media extraction warning:", zipErr);
+      }
+    }
+
     return {
       id,
       name: file.name,
@@ -217,6 +386,7 @@ export async function parseUploadedFile(file: File): Promise<LoadedDocument> {
       contentHtml: "",
       contentText: "",
       history: [],
+      images: excelImages,
     };
   }
 
@@ -224,10 +394,21 @@ export async function parseUploadedFile(file: File): Promise<LoadedDocument> {
   if (ext === "docx") {
     const buffer = await file.arrayBuffer();
     try {
-      const htmlResult = await mammoth.convertToHtml({ arrayBuffer: buffer });
+      const htmlResult = await mammoth.convertToHtml(
+        { arrayBuffer: buffer },
+        {
+          convertImage: mammoth.images.imgElement((image) => {
+            return image.read("base64").then((imageBuffer) => {
+              return {
+                src: `data:${image.contentType};base64,${imageBuffer}`,
+              };
+            });
+          }),
+        }
+      );
       const rawTextResult = await mammoth.extractRawText({ arrayBuffer: buffer });
 
-      // Preserve rich HTML with table, bold, italic tags
+      // Preserve rich HTML with table, bold, italic, and images
       const richHtml = htmlResult.value || "<p>Dokumen kosong</p>";
 
       return {
@@ -264,7 +445,7 @@ export async function parseUploadedFile(file: File): Promise<LoadedDocument> {
   if (ext === "pdf") {
     const buffer = await file.arrayBuffer();
     try {
-      const { text, html } = await extractTextFromPdf(buffer);
+      const { text, html, images } = await extractTextFromPdf(buffer);
 
       return {
         id,
@@ -278,6 +459,7 @@ export async function parseUploadedFile(file: File): Promise<LoadedDocument> {
         contentHtml: html,
         contentText: text,
         history: [],
+        images,
       };
     } catch (err) {
       console.error("PDF parsing error:", err);
@@ -420,6 +602,18 @@ export async function exportDocument(
           )
           .join("");
 
+        const imagesHeaderHtml =
+          doc.images && doc.images.length > 0
+            ? `<div style="margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+                ${doc.images
+                  .map(
+                    (img) =>
+                      `<img src="${img}" alt="Gambar Berkas" style="max-height: 80px; max-width: 180px; object-fit: contain; border-radius: 4px; border: 1px solid #e5e7eb; display: inline-block;" />`
+                  )
+                  .join("")}
+              </div>`
+            : "";
+
         const container = document.createElement("div");
         container.style.position = "fixed";
         container.style.left = "-9999px";
@@ -434,6 +628,7 @@ export async function exportDocument(
             <h1 style="margin: 0; font-size: 20px; color: #000;">${baseName}</h1>
             <div style="font-size: 11px; color: #666; margin-top: 4px;">Diekspor pada: ${new Date().toLocaleString("id-ID")}</div>
           </div>
+          ${imagesHeaderHtml}
           <table border="1" style="width: 100%; border-collapse: collapse; margin-top: 10px;">
             ${rowsHtml}
           </table>
@@ -512,6 +707,7 @@ export async function exportDocument(
           p { margin: 6pt 0; line-height: 1.5; }
           ul, ol { margin: 6pt 0 6pt 24pt; }
           li { margin: 3pt 0; }
+          img { max-width: 100%; height: auto; display: inline-block; margin: 8pt 0; }
         </style>
       </head>
       <body>
@@ -552,6 +748,7 @@ export async function exportDocument(
             const canvas = await html2canvas(sheet, {
               scale: 2,
               useCORS: true,
+              allowTaint: true,
               logging: false,
               backgroundColor: "#ffffff",
             });
@@ -608,6 +805,7 @@ export async function exportDocument(
           const canvas = await html2canvas(container, {
             scale: 2,
             useCORS: true,
+            allowTaint: true,
             logging: false,
             backgroundColor: "#ffffff",
           });
