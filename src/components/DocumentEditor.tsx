@@ -36,6 +36,14 @@ import {
   ExternalLink,
   Eraser,
   Minus,
+  Box,
+  Columns,
+  CheckSquare,
+  FileText,
+  Tag,
+  ChevronDown,
+  Scissors,
+  Quote,
 } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/lib/types";
 import { useAppTheme } from "@/context/ThemeContext";
@@ -75,6 +83,14 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
   const activeLinkElRef = useRef<HTMLAnchorElement | null>(null);
   const [hasActiveLink, setHasActiveLink] = useState(false);
   const savedLinkRangeRef = useRef<Range | null>(null);
+
+  // Single border / line targeting & Word-style elements state
+  const [isWordElementsModalOpen, setIsWordElementsModalOpen] = useState(false);
+  const [isBorderMenuOpen, setIsBorderMenuOpen] = useState(false);
+  const activeBorderElRef = useRef<HTMLElement | null>(null);
+  const [hasActiveBorderEl, setHasActiveBorderEl] = useState(false);
+  const [activeBorderTag, setActiveBorderTag] = useState("");
+  const [borderToolbarPos, setBorderToolbarPos] = useState<{ x: number; y: number } | null>(null);
 
   const handleOpenLinkModal = useCallback(() => {
     const selection = window.getSelection();
@@ -237,6 +253,93 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
     if (editorRef.current) onChange(editorRef.current.innerHTML);
   };
 
+  const handleRemoveBorderFromActiveElement = () => {
+    const el = activeBorderElRef.current;
+    if (el) {
+      if (el.tagName.toLowerCase() === "hr" || el.classList.contains("doc-divider")) {
+        el.remove();
+      } else {
+        el.style.borderBottom = "none";
+        el.style.borderTop = "none";
+        el.style.border = "none";
+        el.style.paddingBottom = "0px";
+      }
+      if (editorRef.current) onChange(editorRef.current.innerHTML);
+      activeBorderElRef.current = null;
+      setHasActiveBorderEl(false);
+      setBorderToolbarPos(null);
+    }
+  };
+
+  const handleDeleteActiveRow = () => {
+    const el = activeBorderElRef.current;
+    if (el && el !== editorRef.current && !el.classList.contains("pdf-page-sheet")) {
+      el.remove();
+      if (editorRef.current) onChange(editorRef.current.innerHTML);
+      activeBorderElRef.current = null;
+      setHasActiveBorderEl(false);
+      setBorderToolbarPos(null);
+    }
+  };
+
+  const handleSetBorderOnActive = (styleType: "dotted" | "solid" | "dashed" | "box" | "none") => {
+    const el = activeBorderElRef.current;
+    if (!el || el === editorRef.current) return;
+    if (styleType === "none") {
+      el.style.borderBottom = "none";
+      el.style.borderTop = "none";
+      el.style.border = "none";
+    } else if (styleType === "dotted") {
+      el.style.borderBottom = "1px dotted #888888";
+      el.style.paddingBottom = "4px";
+    } else if (styleType === "solid") {
+      el.style.borderBottom = "1.5px solid #222222";
+      el.style.paddingBottom = "4px";
+    } else if (styleType === "dashed") {
+      el.style.borderBottom = "1.5px dashed #888888";
+      el.style.paddingBottom = "4px";
+    } else if (styleType === "box") {
+      el.style.border = "1px solid #cbd5e1";
+      el.style.padding = "10px";
+      el.style.borderRadius = "4px";
+    }
+    if (editorRef.current) onChange(editorRef.current.innerHTML);
+    setIsBorderMenuOpen(false);
+  };
+
+  const handleInsertWordElement = (html: string) => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      if (editorRef.current.contains(range.commonAncestorContainer)) {
+        range.deleteContents();
+        const div = document.createElement("div");
+        div.innerHTML = html;
+        const frag = document.createDocumentFragment();
+        let node: Node | null = null;
+        let lastNode: Node | null = null;
+        while ((node = div.firstChild)) {
+          lastNode = frag.appendChild(node);
+        }
+        range.insertNode(frag);
+        if (lastNode) {
+          range.setStartAfter(lastNode);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+        if (editorRef.current) onChange(editorRef.current.innerHTML);
+        setIsWordElementsModalOpen(false);
+        return;
+      }
+    }
+    editorRef.current.insertAdjacentHTML("beforeend", html);
+    if (editorRef.current) onChange(editorRef.current.innerHTML);
+    setIsWordElementsModalOpen(false);
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
@@ -349,10 +452,51 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
 
     // Check if user clicked an hr / divider line
     if (target.tagName.toLowerCase() === "hr" || target.classList.contains("doc-divider")) {
-      target.style.outline = "2px dashed #f59e0b";
-      target.style.outlineOffset = "2px";
-      target.title = "Garis pemisah terpilih (Tekan Backspace atau klik dua kali untuk menghapus)";
+      activeBorderElRef.current = target;
+      setHasActiveBorderEl(true);
+      setActiveBorderTag("hr");
+      const rect = target.getBoundingClientRect();
+      const x = Math.max(10, Math.min(window.innerWidth - 340, rect.left + rect.width / 2 - 160));
+      const y = Math.max(65, rect.top - 52);
+      setBorderToolbarPos({ x, y });
       return;
+    }
+
+    // Check if user clicked a heading or container with a border (like dotted underline)
+    const blockEl = target.closest(
+      "h1, h2, h3, h4, h5, h6, .pdf-cv-header, p, div, blockquote, section"
+    ) as HTMLElement | null;
+
+    if (
+      blockEl &&
+      editorRef.current?.contains(blockEl) &&
+      !blockEl.classList.contains("pdf-page-sheet") &&
+      blockEl !== editorRef.current
+    ) {
+      activeBorderElRef.current = blockEl;
+      setActiveBorderTag(blockEl.tagName.toLowerCase());
+
+      const bBottom = blockEl.style.borderBottom;
+      const bTop = blockEl.style.borderTop;
+      const bAll = blockEl.style.border;
+      const hasBorder =
+        (bBottom && bBottom !== "none") ||
+        (bTop && bTop !== "none") ||
+        (bAll && bAll !== "none");
+
+      if (hasBorder) {
+        setHasActiveBorderEl(true);
+        const rect = blockEl.getBoundingClientRect();
+        const x = Math.max(10, Math.min(window.innerWidth - 340, rect.left + rect.width / 2 - 160));
+        const y = Math.max(65, rect.top - 52);
+        setBorderToolbarPos({ x, y });
+      } else if (!target.closest("#border-floating-toolbar")) {
+        setHasActiveBorderEl(false);
+        setBorderToolbarPos(null);
+      }
+    } else if (!target.closest("#border-floating-toolbar")) {
+      setBorderToolbarPos(null);
+      setHasActiveBorderEl(false);
     }
 
     if (target.tagName.toLowerCase() === "img") {
@@ -870,30 +1014,126 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             <span>+ Link</span>
           </button>
 
-          {/* Line & Dot Management Tools */}
+          {/* Word Elements Insert Tool */}
           <button
             type="button"
-            onClick={() => execCmd("insertHorizontalRule")}
-            title="Sisipkan Garis Pemisah Baru (<hr>)"
-            className={getBtnClass()}
-          >
-            <Minus className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={handleRemoveLinesAndDots}
-            title="Hapus Semua Garis, Garis Titik & Dot Pemisah dari Dokumen"
-            className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded cursor-pointer ${
+            onClick={() => setIsWordElementsModalOpen(true)}
+            title="Sisipkan Elemen Dokumen Word (Garis, Kotak Teks, Badge, Kolom, dll.)"
+            className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded cursor-pointer ${
               theme === "retro"
-                ? "bg-[#c0c0c0] border-t border-l border-t-white border-l-white border-b border-r border-b-black border-r-black text-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white font-bold"
+                ? "bg-[#c0c0c0] border-t border-l border-t-white border-l-white border-b border-r border-b-black border-r-black text-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white"
                 : theme === "brutalist"
                 ? "border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000]"
-                : "border border-current/20 hover:bg-current/10"
+                : "border border-indigo-400/30 text-indigo-400 hover:bg-indigo-500/10"
             }`}
           >
-            <Eraser className="h-3.5 w-3.5 text-amber-500" />
-            <span>Hapus Garis/Dot</span>
+            <Box className="h-3.5 w-3.5 text-indigo-400" />
+            <span>+ Elemen (Word)</span>
           </button>
+
+          {/* Border & Line Dropdown Menu */}
+          <div className="relative inline-block">
+            <button
+              type="button"
+              onClick={() => setIsBorderMenuOpen((prev) => !prev)}
+              title="Atur Garis / Border pada Elemen atau Hapus 1 Garis"
+              className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded cursor-pointer ${
+                theme === "retro"
+                  ? "bg-[#c0c0c0] border-t border-l border-t-white border-l-white border-b border-r border-b-black border-r-black text-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white"
+                  : theme === "brutalist"
+                  ? "border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000]"
+                  : "border border-current/20 hover:bg-current/10"
+              }`}
+            >
+              <Minus className="h-3.5 w-3.5 text-amber-500" />
+              <span>Garis / Border</span>
+              <ChevronDown className="h-3 w-3 opacity-60" />
+            </button>
+
+            {isBorderMenuOpen && (
+              <div
+                className={`absolute left-0 mt-1 w-56 z-50 p-1.5 rounded-xl border shadow-xl flex flex-col gap-1 text-xs animate-in fade-in zoom-in-95 duration-100 ${
+                  theme === "retro"
+                    ? "bg-[#c0c0c0] border-2 border-black font-mono text-black"
+                    : theme === "brutalist"
+                    ? "border-3 border-black bg-white text-black shadow-[3px_3px_0px_#000]"
+                    : theme === "minimal"
+                    ? "border border-zinc-200 bg-white text-zinc-800"
+                    : "border border-current/20 bg-[#0E101C] text-white shadow-2xl"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={handleRemoveBorderFromActiveElement}
+                  className="w-full text-left px-2.5 py-1.5 rounded hover:bg-rose-500/15 text-rose-400 font-bold flex items-center gap-2 cursor-pointer"
+                >
+                  <Scissors className="h-3.5 w-3.5" />
+                  <span>Hapus 1 Garis Ini</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDeleteActiveRow}
+                  className="w-full text-left px-2.5 py-1.5 rounded hover:bg-rose-500/15 text-rose-400 font-semibold flex items-center gap-2 cursor-pointer"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Hapus 1 Baris Teks Ini</span>
+                </button>
+
+                <span className="h-px bg-current/15 my-0.5" />
+
+                <button
+                  type="button"
+                  onClick={() => handleSetBorderOnActive("dotted")}
+                  className="w-full text-left px-2.5 py-1.5 rounded hover:bg-current/10 flex items-center gap-2 cursor-pointer"
+                >
+                  <span className="w-4 h-0.5 border-b border-dotted border-current"></span>
+                  <span>Garis Titik Bawah</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSetBorderOnActive("solid")}
+                  className="w-full text-left px-2.5 py-1.5 rounded hover:bg-current/10 flex items-center gap-2 cursor-pointer"
+                >
+                  <span className="w-4 h-0.5 border-b border-current"></span>
+                  <span>Garis Solid Bawah</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSetBorderOnActive("dashed")}
+                  className="w-full text-left px-2.5 py-1.5 rounded hover:bg-current/10 flex items-center gap-2 cursor-pointer"
+                >
+                  <span className="w-4 h-0.5 border-b border-dashed border-current"></span>
+                  <span>Garis Putus-Putus Bawah</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSetBorderOnActive("box")}
+                  className="w-full text-left px-2.5 py-1.5 rounded hover:bg-current/10 flex items-center gap-2 cursor-pointer"
+                >
+                  <Box className="h-3.5 w-3.5 text-blue-400" />
+                  <span>Kotak Pembungkus (Box)</span>
+                </button>
+
+                <span className="h-px bg-current/15 my-0.5" />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleRemoveLinesAndDots();
+                    setIsBorderMenuOpen(false);
+                  }}
+                  className="w-full text-left px-2.5 py-1.5 rounded hover:bg-current/10 text-amber-500 font-semibold flex items-center gap-2 cursor-pointer"
+                >
+                  <Eraser className="h-3.5 w-3.5" />
+                  <span>Hapus Semua Garis Dokumen</span>
+                </button>
+              </div>
+            )}
+          </div>
 
           <span className="h-4 w-px bg-current/20 mx-1" />
 
@@ -1442,6 +1682,314 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
+        </div>
+      )}
+
+      {/* Floating Border & Line Context Toolbar (Hapus 1 Garis / Dot / Baris) */}
+      {hasActiveBorderEl && borderToolbarPos && (
+        <div
+          id="border-floating-toolbar"
+          style={{
+            position: "fixed",
+            left: `${borderToolbarPos.x}px`,
+            top: `${borderToolbarPos.y}px`,
+          }}
+          className={`z-50 flex items-center gap-1.5 p-1.5 rounded-xl border shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 ${
+            theme === "retro"
+              ? "bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black font-mono text-black"
+              : theme === "brutalist"
+              ? "border-3 border-black bg-white text-black shadow-[4px_4px_0px_#000]"
+              : theme === "minimal"
+              ? "border border-zinc-200 bg-white/95 text-zinc-800"
+              : "border border-amber-500/30 bg-[#0E101C]/95 text-white shadow-[0_0_25px_rgba(245,158,11,0.3)]"
+          }`}
+        >
+          <span className="text-[10px] font-bold px-1 text-amber-500 uppercase tracking-wider">
+            {activeBorderTag === "hr" ? "Garis Pemisah" : `Garis ${activeBorderTag.toUpperCase()}`}
+          </span>
+
+          <button
+            type="button"
+            onClick={handleRemoveBorderFromActiveElement}
+            title={activeBorderTag === "hr" ? "Hapus Garis Ini Saja" : "Hapus Garis / Titik Bawah pada Elemen Ini Saja"}
+            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded bg-rose-600 text-white hover:bg-rose-500 active:scale-95 cursor-pointer shadow-xs"
+          >
+            <Scissors className="h-3 w-3" />
+            <span>Hapus 1 Garis Ini</span>
+          </button>
+
+          {activeBorderTag !== "hr" && (
+            <button
+              type="button"
+              onClick={handleDeleteActiveRow}
+              title="Hapus Seluruh 1 Baris Teks Ini Beserta Garisnya"
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded hover:bg-rose-500/15 text-rose-400 cursor-pointer"
+            >
+              <Trash2 className="h-3 w-3" />
+              <span>Hapus 1 Baris</span>
+            </button>
+          )}
+
+          {activeBorderTag === "hr" && (
+            <div className="flex items-center gap-1 border-l border-current/20 pl-1.5 ml-0.5">
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeBorderElRef.current) {
+                    activeBorderElRef.current.style.border = "none";
+                    activeBorderElRef.current.style.borderBottom = "1px dotted #888888";
+                    if (editorRef.current) onChange(editorRef.current.innerHTML);
+                  }
+                }}
+                className="px-1.5 py-0.5 text-[10px] font-bold rounded hover:bg-current/10 cursor-pointer"
+              >
+                Titik
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeBorderElRef.current) {
+                    activeBorderElRef.current.style.border = "none";
+                    activeBorderElRef.current.style.borderBottom = "1.5px solid #222222";
+                    if (editorRef.current) onChange(editorRef.current.innerHTML);
+                  }
+                }}
+                className="px-1.5 py-0.5 text-[10px] font-bold rounded hover:bg-current/10 cursor-pointer"
+              >
+                Solid
+              </button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              setBorderToolbarPos(null);
+              setHasActiveBorderEl(false);
+            }}
+            className="p-1 rounded hover:bg-current/10 opacity-70 hover:opacity-100 cursor-pointer ml-1"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Word-Style Elements Insertion Modal */}
+      {isWordElementsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-100">
+          <div
+            className={`w-full max-w-2xl max-h-[85vh] overflow-y-auto flex flex-col gap-4 p-5 rounded-2xl border shadow-2xl animate-in zoom-in-95 duration-150 ${
+              theme === "retro"
+                ? "bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black font-mono text-black"
+                : theme === "brutalist"
+                ? "border-4 border-black bg-white text-black shadow-[6px_6px_0px_#000]"
+                : theme === "minimal"
+                ? "border border-zinc-200 bg-white text-zinc-900 shadow-xl"
+                : "border border-indigo-500/30 bg-[#0E101C] text-white shadow-[0_0_35px_rgba(99,102,241,0.25)]"
+            }`}
+          >
+            <div className="flex items-center justify-between border-b border-current/15 pb-2.5">
+              <div className="flex items-center gap-2">
+                <Box className="h-4 w-4 text-indigo-400" />
+                <h3 className="text-sm font-bold uppercase tracking-wide">
+                  Sisipkan Elemen Dokumen (Gaya Microsoft Word)
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsWordElementsModalOpen(false)}
+                className="p-1 rounded hover:bg-current/10 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              {/* Category: Garis & Pembatas */}
+              <div className="p-3 rounded-xl border border-current/10 bg-current/5 flex flex-col gap-2">
+                <div className="font-bold uppercase tracking-wider text-[11px] opacity-70 flex items-center gap-1.5">
+                  <Minus className="h-3.5 w-3.5 text-amber-500" />
+                  <span>Garis Pemisah (Dividers)</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleInsertWordElement(
+                      '<hr style="border:none;border-bottom:1px dotted #888888;margin:18px 0;clear:both;" />'
+                    )
+                  }
+                  className="w-full text-left p-2 rounded-lg hover:bg-current/10 cursor-pointer border border-current/10 flex flex-col gap-1"
+                >
+                  <span className="font-semibold text-xs">Garis Titik (Dotted Line)</span>
+                  <div className="border-b border-dotted border-gray-400 my-1"></div>
+                  <span className="text-[10px] opacity-60">Garis titik halus khas CV &amp; dokumen formal</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleInsertWordElement(
+                      '<hr style="border:none;border-bottom:1.5px solid #222222;margin:18px 0;clear:both;" />'
+                    )
+                  }
+                  className="w-full text-left p-2 rounded-lg hover:bg-current/10 cursor-pointer border border-current/10 flex flex-col gap-1"
+                >
+                  <span className="font-semibold text-xs">Garis Lurus Solid (Solid Line)</span>
+                  <div className="border-b border-gray-500 my-1"></div>
+                  <span className="text-[10px] opacity-60">Pemisah standar antar bagian dokumen</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleInsertWordElement(
+                      '<hr style="border:none;border-bottom:3px double #333333;margin:18px 0;clear:both;" />'
+                    )
+                  }
+                  className="w-full text-left p-2 rounded-lg hover:bg-current/10 cursor-pointer border border-current/10 flex flex-col gap-1"
+                >
+                  <span className="font-semibold text-xs">Garis Ganda (Double Line)</span>
+                  <div className="border-b-4 border-double border-gray-600 my-1"></div>
+                  <span className="text-[10px] opacity-60">Gaya klasik Microsoft Word untuk batas bagian</span>
+                </button>
+              </div>
+
+              {/* Category: Kotak Teks & Catatan */}
+              <div className="p-3 rounded-xl border border-current/10 bg-current/5 flex flex-col gap-2">
+                <div className="font-bold uppercase tracking-wider text-[11px] opacity-70 flex items-center gap-1.5">
+                  <Box className="h-3.5 w-3.5 text-blue-500" />
+                  <span>Kotak Teks &amp; Sorotan</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleInsertWordElement(
+                      '<div style="border:1px solid #cbd5e1;background:rgba(241,245,249,0.5);padding:14px 18px;border-radius:6px;margin:16px 0;"><strong>Kotak Teks Word:</strong> Tuliskan keterangan penting atau pengumuman di sini...</div>'
+                    )
+                  }
+                  className="w-full text-left p-2 rounded-lg hover:bg-current/10 cursor-pointer border border-current/10 flex flex-col gap-1"
+                >
+                  <span className="font-semibold text-xs">Kotak Teks (Word Text Box)</span>
+                  <span className="text-[10px] opacity-60">Kotak berbingkai rapi untuk menyorot teks</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleInsertWordElement(
+                      '<div style="border-left:4px solid #2563eb;background:rgba(37,99,235,0.08);padding:12px 16px;margin:16px 0;border-radius:0 6px 6px 0;"><strong>Catatan Penting:</strong> Berikan informasi atau instruksi spesifik di sini.</div>'
+                    )
+                  }
+                  className="w-full text-left p-2 rounded-lg hover:bg-current/10 cursor-pointer border border-current/10 flex flex-col gap-1"
+                >
+                  <span className="font-semibold text-xs">Kotak Catatan (Callout Info)</span>
+                  <span className="text-[10px] opacity-60">Kotak dengan aksen garis vertikal di sebelah kiri</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleInsertWordElement(
+                      '<blockquote style="border-left:3px solid #64748b;padding:8px 16px;margin:16px 0;font-style:italic;color:#475569;">"Tuliskan kutipan, moto, atau visi misi di sini..."</blockquote>'
+                    )
+                  }
+                  className="w-full text-left p-2 rounded-lg hover:bg-current/10 cursor-pointer border border-current/10 flex flex-col gap-1"
+                >
+                  <span className="font-semibold text-xs">Kotak Kutipan (Quote)</span>
+                  <span className="text-[10px] opacity-60">Kutipan miring dengan garis batas elegan</span>
+                </button>
+              </div>
+
+              {/* Category: Tata Letak & Kolom */}
+              <div className="p-3 rounded-xl border border-current/10 bg-current/5 flex flex-col gap-2">
+                <div className="font-bold uppercase tracking-wider text-[11px] opacity-70 flex items-center gap-1.5">
+                  <Columns className="h-3.5 w-3.5 text-emerald-500" />
+                  <span>Kolom Berdampingan</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleInsertWordElement(
+                      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:16px 0;"><div style="border:1px dashed #cbd5e1;padding:10px;border-radius:4px;"><strong>Kolom Kiri:</strong> Teks kolom 1</div><div style="border:1px dashed #cbd5e1;padding:10px;border-radius:4px;"><strong>Kolom Kanan:</strong> Teks kolom 2</div></div>'
+                    )
+                  }
+                  className="w-full text-left p-2 rounded-lg hover:bg-current/10 cursor-pointer border border-current/10 flex flex-col gap-1"
+                >
+                  <span className="font-semibold text-xs">2 Kolom Sejajar (2 Columns)</span>
+                  <span className="text-[10px] opacity-60">Membagi konten dokumen menjadi 2 bagian kiri-kanan</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleInsertWordElement(
+                      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin:16px 0;"><div style="border:1px dashed #cbd5e1;padding:8px;border-radius:4px;">Kolom 1</div><div style="border:1px dashed #cbd5e1;padding:8px;border-radius:4px;">Kolom 2</div><div style="border:1px dashed #cbd5e1;padding:8px;border-radius:4px;">Kolom 3</div></div>'
+                    )
+                  }
+                  className="w-full text-left p-2 rounded-lg hover:bg-current/10 cursor-pointer border border-current/10 flex flex-col gap-1"
+                >
+                  <span className="font-semibold text-xs">3 Kolom Sejajar (3 Columns)</span>
+                  <span className="text-[10px] opacity-60">Membagi konten menjadi 3 kolom rapi</span>
+                </button>
+              </div>
+
+              {/* Category: Fitur Word Lainnya */}
+              <div className="p-3 rounded-xl border border-current/10 bg-current/5 flex flex-col gap-2">
+                <div className="font-bold uppercase tracking-wider text-[11px] opacity-70 flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5 text-purple-500" />
+                  <span>Elemen Khusus Dokumen</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleInsertWordElement(
+                      '<span style="display:inline-block;padding:2px 10px;margin:2px 4px;background:#e0e7ff;color:#3730a3;border-radius:12px;font-size:12px;font-weight:600;">Skill Baru</span>&nbsp;'
+                    )
+                  }
+                  className="w-full text-left p-2 rounded-lg hover:bg-current/10 cursor-pointer border border-current/10 flex flex-col gap-1"
+                >
+                  <span className="font-semibold text-xs">Badge / Pill Keahlian (Skill Tag)</span>
+                  <span className="text-[10px] opacity-60">Badge lonjong untuk keahlian atau kategori</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleInsertWordElement(
+                      '<div style="display:flex;align-items:center;gap:8px;margin:6px 0;"><input type="checkbox" style="width:15px;height:15px;cursor:pointer;" /> <span>Item daftar periksa baru</span></div>'
+                    )
+                  }
+                  className="w-full text-left p-2 rounded-lg hover:bg-current/10 cursor-pointer border border-current/10 flex flex-col gap-1"
+                >
+                  <span className="font-semibold text-xs">Daftar Periksa (Checkbox)</span>
+                  <span className="text-[10px] opacity-60">Kotak centang interaktif untuk daftar to-do</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleInsertWordElement(
+                      '<div class="word-page-break" style="page-break-after:always;border-top:1px dashed #94a3b8;margin:28px 0;padding-top:6px;font-size:11px;color:#94a3b8;text-align:center;">--- Pemisah Halaman (Page Break) ---</div>'
+                    )
+                  }
+                  className="w-full text-left p-2 rounded-lg hover:bg-current/10 cursor-pointer border border-current/10 flex flex-col gap-1"
+                >
+                  <span className="font-semibold text-xs">Pemisah Halaman (Page Break)</span>
+                  <span className="text-[10px] opacity-60">Memulai halaman baru saat dokumen dicetak atau diekspor</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-current/15">
+              <button
+                type="button"
+                onClick={() => setIsWordElementsModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold rounded-lg hover:bg-current/10 cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
