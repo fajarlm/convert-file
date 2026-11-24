@@ -526,7 +526,7 @@ async function extractTextFromPdf(
           : "";
 
       pageElements.push(`
-        <div class="pdf-cv-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding-bottom: 20px; border-bottom: 1px dotted #888888; margin-bottom: 20px;">
+        <div class="pdf-cv-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding-bottom: 12px; margin-bottom: 18px;">
           <div style="display: flex; align-items: flex-start; gap: 20px;">
             ${photoHtml}
             <div>
@@ -592,10 +592,12 @@ function renderPageBuckets(
 
     const first = bucket.items[0];
     let fullLineStr = bucket.items.map((it) => it.str).join(" ").trim();
-    // Normalize common PDF text extraction splits
+    // Normalize common PDF text extraction splits & remove stray dot artifacts
     fullLineStr = fullLineStr
       .replace(/\bSUMM\s+ARY\b/gi, "SUMMARY")
-      .replace(/\bL\s+ANGUAGES\b/gi, "LANGUAGES");
+      .replace(/\bL\s+ANGUAGES\b/gi, "LANGUAGES")
+      .replace(/[\s\u200B\uFEFF⋮·:;|]+$/g, "")
+      .trim();
 
     // Check if section heading (e.g. SUMMARY, EXPERIENCE, PROJECTS, EDUCATION, CERTIFICATES, SKILLS, LANGUAGES)
     const isHeading =
@@ -608,7 +610,7 @@ function renderPageBuckets(
 
     if (isHeading) {
       output.push(`
-        <h2 style="font-size: 14px; font-weight: 700; text-transform: uppercase; color: ${first.color || "#111111"}; border-bottom: 1px dotted #888888; padding-bottom: 4px; margin-top: 22px; margin-bottom: 12px; letter-spacing: 0.8px;">
+        <h2 style="font-size: 14px; font-weight: 700; text-transform: uppercase; color: ${first.color || "#111111"}; margin-top: 22px; margin-bottom: 10px; letter-spacing: 0.8px;">
           ${escapeHtml(fullLineStr)}
         </h2>
       `);

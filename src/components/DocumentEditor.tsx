@@ -34,6 +34,8 @@ import {
   Link as LinkIcon,
   Unlink,
   ExternalLink,
+  Eraser,
+  Minus,
 } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/lib/types";
 import { useAppTheme } from "@/context/ThemeContext";
@@ -201,6 +203,40 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
     savedLinkRangeRef.current = null;
   };
 
+  const handleRemoveLinesAndDots = () => {
+    if (!editorRef.current) return;
+    const root = editorRef.current;
+
+    // 1. Remove all <hr> tags and divider elements
+    const hrs = root.querySelectorAll("hr, .doc-divider, .pdf-divider");
+    hrs.forEach((hr) => hr.remove());
+
+    // 2. Remove borderBottom, borderTop, and border styling from headings, headers, and elements
+    const allEls = root.querySelectorAll("*");
+    allEls.forEach((el) => {
+      const htmlEl = el as HTMLElement;
+      if (htmlEl.style) {
+        if (htmlEl.style.borderBottom) htmlEl.style.borderBottom = "none";
+        if (htmlEl.style.borderTop) htmlEl.style.borderTop = "none";
+        if (htmlEl.style.border && !htmlEl.closest("table")) htmlEl.style.border = "none";
+      }
+    });
+
+    // 3. Remove stray dot artifacts (⋮ or isolated dots) from text nodes
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const textNodes: Text[] = [];
+    while (walker.nextNode()) {
+      textNodes.push(walker.currentNode as Text);
+    }
+    for (const node of textNodes) {
+      if (node.nodeValue) {
+        node.nodeValue = node.nodeValue.replace(/[\s\u200B\uFEFF]*[⋮]+[\s\u200B\uFEFF]*/g, " ");
+      }
+    }
+
+    if (editorRef.current) onChange(editorRef.current.innerHTML);
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
@@ -311,6 +347,14 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
       return;
     }
 
+    // Check if user clicked an hr / divider line
+    if (target.tagName.toLowerCase() === "hr" || target.classList.contains("doc-divider")) {
+      target.style.outline = "2px dashed #f59e0b";
+      target.style.outlineOffset = "2px";
+      target.title = "Garis pemisah terpilih (Tekan Backspace atau klik dua kali untuk menghapus)";
+      return;
+    }
+
     if (target.tagName.toLowerCase() === "img") {
       const img = target as HTMLImageElement;
       if (selectedImgRef.current && selectedImgRef.current !== img) {
@@ -332,6 +376,14 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
         setHasSelectedImg(false);
         setImgToolbarPos(null);
       }
+    }
+  };
+
+  const handleCanvasDoubleClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName.toLowerCase() === "hr" || target.classList.contains("doc-divider")) {
+      target.remove();
+      if (editorRef.current) onChange(editorRef.current.innerHTML);
     }
   };
 
@@ -816,6 +868,31 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
           >
             <LinkIcon className="h-3.5 w-3.5 text-blue-400" />
             <span>+ Link</span>
+          </button>
+
+          {/* Line & Dot Management Tools */}
+          <button
+            type="button"
+            onClick={() => execCmd("insertHorizontalRule")}
+            title="Sisipkan Garis Pemisah Baru (<hr>)"
+            className={getBtnClass()}
+          >
+            <Minus className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={handleRemoveLinesAndDots}
+            title="Hapus Semua Garis, Garis Titik & Dot Pemisah dari Dokumen"
+            className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded cursor-pointer ${
+              theme === "retro"
+                ? "bg-[#c0c0c0] border-t border-l border-t-white border-l-white border-b border-r border-b-black border-r-black text-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white font-bold"
+                : theme === "brutalist"
+                ? "border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000]"
+                : "border border-current/20 hover:bg-current/10"
+            }`}
+          >
+            <Eraser className="h-3.5 w-3.5 text-amber-500" />
+            <span>Hapus Garis/Dot</span>
           </button>
 
           <span className="h-4 w-px bg-current/20 mx-1" />
@@ -1387,6 +1464,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
           suppressContentEditableWarning={true}
           onInput={handleInput}
           onClick={handleCanvasClick}
+          onDoubleClick={handleCanvasDoubleClick}
           onMouseUp={handleMouseUp}
           onKeyUp={handleMouseUp}
           className={`min-h-[500px] w-full max-w-5xl mx-auto focus:outline-hidden text-sm sm:text-base leading-relaxed ${
