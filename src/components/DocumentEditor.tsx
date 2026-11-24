@@ -152,17 +152,19 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
       const img = target as HTMLImageElement;
       if (selectedImgRef.current && selectedImgRef.current !== img) {
         selectedImgRef.current.style.outline = "";
+        selectedImgRef.current.style.outlineOffset = "";
       }
       img.style.outline = "2px dashed #2563eb";
       img.style.outlineOffset = "3px";
       selectedImgRef.current = img;
       setHasSelectedImg(true);
-      const curW = img.offsetWidth || 80;
+      const curW = img.offsetWidth || 106;
       setImgWidth(curW);
       updateImgPos(img);
     } else if (!target.closest("#image-floating-toolbar")) {
       if (selectedImgRef.current) {
         selectedImgRef.current.style.outline = "";
+        selectedImgRef.current.style.outlineOffset = "";
         selectedImgRef.current = null;
         setHasSelectedImg(false);
         setImgToolbarPos(null);
@@ -942,7 +944,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             <button
               type="button"
               onClick={() => handleSetWidth(80)}
-              title="Ukuran Standar CV (80px)"
+              title="Ukuran Ringkas (80px)"
               className={`px-1.5 py-0.5 text-[10px] font-bold rounded hover:bg-current/10 cursor-pointer ${
                 imgWidth === 80 ? "bg-current/15 font-black text-cyan-400" : ""
               }`}
@@ -951,23 +953,33 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => handleSetWidth(120)}
-              title="Ukuran Sedang (120px)"
+              onClick={() => handleSetWidth(106)}
+              title="Ukuran Asli PDF (106px)"
               className={`px-1.5 py-0.5 text-[10px] font-bold rounded hover:bg-current/10 cursor-pointer ${
-                imgWidth === 120 ? "bg-current/15 font-black text-cyan-400" : ""
+                imgWidth === 106 ? "bg-current/15 font-black text-cyan-400" : ""
               }`}
             >
-              120px
+              106px (Asli)
             </button>
             <button
               type="button"
-              onClick={() => handleSetWidth(160)}
-              title="Ukuran Besar (160px)"
+              onClick={() => handleSetWidth(140)}
+              title="Ukuran Sedang (140px)"
               className={`px-1.5 py-0.5 text-[10px] font-bold rounded hover:bg-current/10 cursor-pointer ${
-                imgWidth === 160 ? "bg-current/15 font-black text-cyan-400" : ""
+                imgWidth === 140 ? "bg-current/15 font-black text-cyan-400" : ""
               }`}
             >
-              160px
+              140px
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetWidth(180)}
+              title="Ukuran Besar (180px)"
+              className={`px-1.5 py-0.5 text-[10px] font-bold rounded hover:bg-current/10 cursor-pointer ${
+                imgWidth === 180 ? "bg-current/15 font-black text-cyan-400" : ""
+              }`}
+            >
+              180px
             </button>
             <button
               type="button"

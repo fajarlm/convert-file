@@ -161,6 +161,55 @@ interface PdfVisualItem {
   isBold: boolean;
   color: string;
   fontName: string;
+  url?: string;
+}
+
+function getContactSvg(type: "phone" | "email" | "linkedin" | "github" | "website" | "location"): string {
+  switch (type) {
+    case "phone":
+      return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1.5px;flex-shrink:0;color:#4b5563;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`;
+    case "email":
+      return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1.5px;flex-shrink:0;color:#4b5563;"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>`;
+    case "linkedin":
+      return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1.5px;flex-shrink:0;color:#0a66c2;"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>`;
+    case "github":
+      return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1.5px;flex-shrink:0;color:#181717;"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>`;
+    case "website":
+      return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1.5px;flex-shrink:0;color:#4b5563;"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`;
+    case "location":
+    default:
+      return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1.5px;flex-shrink:0;color:#4b5563;"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>`;
+  }
+}
+
+function parseContactItem(item: PdfVisualItem): {
+  type: "phone" | "email" | "linkedin" | "github" | "website" | "location";
+  label: string;
+  href?: string;
+} {
+  const str = item.str.trim();
+  const url = item.url;
+
+  if (url?.startsWith("mailto:") || str.includes("@")) {
+    const email = str.includes("@") ? str : url?.replace("mailto:", "") || str;
+    return { type: "email", label: email, href: `mailto:${email}` };
+  }
+  if (url?.startsWith("tel:") || /^\+?[0-9\s\-()]{8,}$/.test(str)) {
+    const phone = str;
+    const cleanNum = phone.replace(/[^\d+]/g, "");
+    return { type: "phone", label: phone, href: `tel:${cleanNum}` };
+  }
+  if (url?.includes("linkedin") || str.toLowerCase().includes("linkedin")) {
+    return { type: "linkedin", label: str || "LinkedIn", href: url || "https://www.linkedin.com" };
+  }
+  if (url?.includes("github") || str.toLowerCase().includes("github")) {
+    return { type: "github", label: str || "GitHub", href: url || "https://github.com" };
+  }
+  if (url?.startsWith("http") || /\.(app|com|org|net|id|io|dev|me)\b/i.test(str)) {
+    const href = url || (str.startsWith("http") ? str : `https://${str}`);
+    return { type: "website", label: str, href };
+  }
+  return { type: "location", label: str };
 }
 
 interface PageImageItem extends ExtractedImage {
@@ -260,7 +309,7 @@ async function extractTextFromPdf(
                     y: Math.max(0, topDist),
                     width: imgW,
                     height: imgH,
-                    isHeader: topDist < 300,
+                    isHeader: topDist < 250,
                     pageNum,
                   };
                   pageImages.push(item);
@@ -277,7 +326,37 @@ async function extractTextFromPdf(
       console.warn("Operator list processing error:", opErr);
     }
 
-    // 2. Extract Operator List Text Colors
+    // 2. Extract Link Annotations (URLs, mailto, tel)
+    interface PdfAnnotationLink {
+      url: string;
+      left: number;
+      right: number;
+      top: number;
+      bottom: number;
+    }
+    const pageLinkAnns: PdfAnnotationLink[] = [];
+    try {
+      const annotations = await page.getAnnotations();
+      for (const ann of annotations) {
+        if (ann.subtype === "Link" && (ann.url || ann.unsafeUrl)) {
+          const rect = ann.rect;
+          if (Array.isArray(rect) && rect.length === 4) {
+            const rawUrl = (ann.url || ann.unsafeUrl) as string;
+            pageLinkAnns.push({
+              url: rawUrl,
+              left: Math.min(rect[0], rect[2]),
+              right: Math.max(rect[0], rect[2]),
+              top: unscaledViewport.height - Math.max(rect[1], rect[3]),
+              bottom: unscaledViewport.height - Math.min(rect[1], rect[3]),
+            });
+          }
+        }
+      }
+    } catch (annErr) {
+      console.warn("PDF annotations extraction warning:", annErr);
+    }
+
+    // 3. Extract Operator List Text Colors
     let curColor = "#222222";
     const showTextColors: string[] = [];
     if (opList) {
@@ -306,7 +385,7 @@ async function extractTextFromPdf(
       }
     }
 
-    // 3. Structured Text Extraction with Exact Coordinates & Colors
+    // 4. Structured Text Extraction with Exact Coordinates & Colors
     const textContent = await page.getTextContent();
     const rawItems: PdfVisualItem[] = [];
     let textIdx = 0;
@@ -321,13 +400,23 @@ async function extractTextFromPdf(
       const y = Math.round((unscaledViewport.height - transform[5]) * 10) / 10;
       const fontSize = Math.max(9, Math.round(Math.hypot(transform[0], transform[1]) * 10) / 10);
       const fontName = (item.fontName || "").toLowerCase();
+
+      const matchedAnn = pageLinkAnns.find(
+        (ann) =>
+          x >= ann.left - 8 &&
+          x <= ann.right + 8 &&
+          y >= ann.top - 4 &&
+          y <= ann.bottom + 4
+      );
+      const url = matchedAnn?.url;
+
       const isBold =
         fontName.includes("bold") ||
-        fontName.includes("b1") ||
-        fontName.includes("b2") ||
         fontName.includes("black") ||
         fontName.includes("heavy") ||
-        fontSize >= 17;
+        fontName.includes("f1") ||
+        fontName.includes("f3") ||
+        fontSize >= 16;
       const color = showTextColors[textIdx] || "#222222";
       textIdx++;
 
@@ -339,6 +428,7 @@ async function extractTextFromPdf(
         isBold,
         color,
         fontName,
+        url,
       });
     }
 
@@ -364,7 +454,7 @@ async function extractTextFromPdf(
       allPageTexts.push(pagePlainTextLines.join("\n"));
     }
 
-    // 4. Reconstruct High-Fidelity Visual Page Sheet
+    // 5. Reconstruct High-Fidelity Visual Page Sheet
     const pageElements: string[] = [];
     const profileImg = pageImages.find((img) => img.isHeader);
 
@@ -374,27 +464,62 @@ async function extractTextFromPdf(
       const headerItems = headerRows.flatMap((r) => r.items);
       const nameItem = headerItems.find((it) => it.fontSize >= 16) || headerItems[0];
       const roleItem = headerItems.find((it) => it !== nameItem && it.x < 250 && it.fontSize >= 10);
-      const contactItems = headerItems.filter((it) => it !== nameItem && it !== roleItem && (it.x >= 280 || it.str.includes("@") || it.str.includes("+") || it.str.includes(".com")));
+      const contactItems = headerItems
+        .filter(
+          (it) =>
+            it !== nameItem &&
+            it !== roleItem &&
+            (it.x >= 280 ||
+              it.str.includes("@") ||
+              it.str.includes("+") ||
+              it.str.includes(".com") ||
+              it.str.toLowerCase().includes("linkedin") ||
+              it.str.toLowerCase().includes("portofolio") ||
+              !!it.url)
+        )
+        .sort((a, b) => a.y - b.y);
 
+      // Clean natural photo without cover, outer border, or box-shadow
+      const photoWidthPx = profileImg?.width ? Math.round(profileImg.width * 1.333) || 106 : 106;
       const photoHtml = profileImg
         ? `<div style="flex-shrink: 0;">
-            <img class="resizable-doc-img" src="${profileImg.dataUrl}" alt="Foto Profil" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1.5px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block; cursor: pointer;" />
+            <img class="resizable-doc-img" src="${profileImg.dataUrl}" alt="Foto Profil" style="width: ${photoWidthPx}px; height: auto; object-fit: contain; display: block; cursor: pointer; border: none; box-shadow: none;" />
           </div>`
         : "";
 
       const contactsHtml =
         contactItems.length > 0
-          ? `<div style="text-align: right; font-size: 11.5px; color: #444444; line-height: 1.6;">
-              ${contactItems.map((c) => `<div>${escapeHtml(c.str)}</div>`).join("")}
+          ? `<div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #4b5563; min-width: 200px;">
+              ${contactItems
+                .map((c) => {
+                  const parsed = parseContactItem(c);
+                  const iconSvg = getContactSvg(parsed.type);
+                  const content = parsed.href
+                    ? `<a href="${parsed.href}" ${
+                        parsed.href.startsWith("http") ? 'target="_blank" rel="noopener noreferrer"' : ""
+                      } style="color: ${parsed.type === "linkedin" ? "#0a66c2" : "inherit"}; text-decoration: none;">${escapeHtml(
+                        parsed.label
+                      )}</a>`
+                    : `<span>${escapeHtml(parsed.label)}</span>`;
+                  return `
+                    <div style="display: flex; align-items: center; justify-content: flex-start; gap: 7px; line-height: 1.45;">
+                      ${iconSvg}
+                      ${content}
+                    </div>
+                  `;
+                })
+                .join("")}
             </div>`
           : "";
 
       pageElements.push(`
-        <div class="pdf-cv-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; padding-bottom: 20px; border-bottom: 1.5px solid #222222; margin-bottom: 24px;">
-          ${photoHtml}
-          <div style="flex: 1;">
-            <h1 style="font-size: 24px; font-weight: 800; color: ${nameItem?.color || "#222222"}; margin: 0 0 4px 0; letter-spacing: -0.5px;">${escapeHtml(nameItem?.str || "")}</h1>
-            ${roleItem ? `<div style="font-size: 13px; font-weight: 500; color: #555555;">${escapeHtml(roleItem.str)}</div>` : ""}
+        <div class="pdf-cv-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding-bottom: 20px; border-bottom: 1.5px solid #222222; margin-bottom: 24px;">
+          <div style="display: flex; align-items: flex-start; gap: 20px;">
+            ${photoHtml}
+            <div>
+              <h1 style="font-size: 24px; font-weight: 700; color: ${nameItem?.color || "#111111"}; margin: 0 0 4px 0; letter-spacing: -0.2px;">${escapeHtml(nameItem?.str || "")}</h1>
+              ${roleItem ? `<div style="font-size: 14.5px; font-weight: 500; color: #555555; margin-top: 2px;">${escapeHtml(roleItem.str)}</div>` : ""}
+            </div>
           </div>
           ${contactsHtml}
         </div>
@@ -453,7 +578,12 @@ function renderPageBuckets(
     }
 
     const first = bucket.items[0];
-    const fullLineStr = bucket.items.map((it) => it.str).join(" ").trim();
+    let fullLineStr = bucket.items.map((it) => it.str).join(" ").trim();
+    // Normalize common PDF text extraction splits
+    fullLineStr = fullLineStr
+      .replace(/\bSUMM\s+ARY\b/gi, "SUMMARY")
+      .replace(/\bL\s+ANGUAGES\b/gi, "LANGUAGES")
+      .replace(/\bEXPERIENCE\s+PROJECTS\b/gi, "EXPERIENCE / PROJECTS");
 
     // Check if section heading (e.g. SUMMARY, EXPERIENCE, PROJECTS, EDUCATION, CERTIFICATES, SKILLS, LANGUAGES)
     const isHeading =
@@ -466,7 +596,7 @@ function renderPageBuckets(
 
     if (isHeading) {
       output.push(`
-        <h2 style="font-size: 13.5px; font-weight: 800; text-transform: uppercase; color: ${first.color || "#111111"}; border-bottom: 1.5px solid #222222; padding-bottom: 4px; margin-top: 24px; margin-bottom: 12px; letter-spacing: 0.8px;">
+        <h2 style="font-size: 14px; font-weight: 700; text-transform: uppercase; color: ${first.color || "#111111"}; border-bottom: 1.5px solid #222222; padding-bottom: 4px; margin-top: 22px; margin-bottom: 12px; letter-spacing: 0.8px;">
           ${escapeHtml(fullLineStr)}
         </h2>
       `);
@@ -474,13 +604,16 @@ function renderPageBuckets(
     }
 
     // Multi-column items with 2 items separated by a gap (e.g. Title on Left, Date on Right)
-    if (bucket.items.length === 2 && bucket.items[1].x - bucket.items[0].x > 120) {
+    if (bucket.items.length === 2 && bucket.items[1].x - bucket.items[0].x > 100) {
       const left = bucket.items[0];
       const right = bucket.items[1];
+      const leftContent = left.url
+        ? `<a href="${left.url}" target="_blank" rel="noopener noreferrer" style="color: ${left.color || "#111111"}; text-decoration: underline; font-weight: 700;">${escapeHtml(left.str)}</a>`
+        : escapeHtml(left.str);
       output.push(`
-        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px; margin-bottom: 2px;">
-          <div style="font-size: 13px; font-weight: 700; color: ${left.color || "#222222"};">${escapeHtml(left.str)}</div>
-          <div style="font-size: 12px; color: #666666; font-style: normal; text-align: right;">${escapeHtml(right.str)}</div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; margin-bottom: 2px;">
+          <div style="font-size: 13px; font-weight: 700; color: ${left.color || "#111111"};">${leftContent}</div>
+          <div style="font-size: 12px; font-weight: 400; color: #666666; font-style: normal; text-align: right;">${escapeHtml(right.str)}</div>
         </div>
       `);
       continue;
@@ -489,10 +622,10 @@ function renderPageBuckets(
     // Multi-column items with 3 items (e.g. Soft Skill | Tech Skill | Level)
     if (bucket.items.length === 3) {
       output.push(`
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 12px; border-bottom: 1px dotted #e5e7eb;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 3px 0; font-size: 12.5px;">
           <span style="width: 45%; color: ${bucket.items[0].color || "#222222"}; font-weight: 500;">${escapeHtml(bucket.items[0].str)}</span>
-          <span style="width: 30%; color: ${bucket.items[1].color || "#222222"}; font-weight: 600;">${escapeHtml(bucket.items[1].str)}</span>
-          <span style="width: 25%; text-align: right; color: #555555;">${escapeHtml(bucket.items[2].str)}</span>
+          <span style="width: 30%; color: ${bucket.items[1].color || "#111111"}; font-weight: 600;">${escapeHtml(bucket.items[1].str)}</span>
+          <span style="width: 25%; text-align: right; color: #555555; font-weight: 400;">${escapeHtml(bucket.items[2].str)}</span>
         </div>
       `);
       continue;
@@ -501,14 +634,33 @@ function renderPageBuckets(
     // Multi-column items with 4 items (e.g. Language 1 | Level 1 | Language 2 | Level 2)
     if (bucket.items.length === 4) {
       output.push(`
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 12px; border-bottom: 1px dotted #e5e7eb;">
-          <span style="width: 25%; color: ${bucket.items[0].color || "#222222"}; font-weight: 600;">${escapeHtml(bucket.items[0].str)}</span>
-          <span style="width: 25%; color: #555555;">${escapeHtml(bucket.items[1].str)}</span>
-          <span style="width: 25%; color: ${bucket.items[2].color || "#222222"}; font-weight: 600;">${escapeHtml(bucket.items[2].str)}</span>
-          <span style="width: 25%; text-align: right; color: #555555;">${escapeHtml(bucket.items[3].str)}</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 3px 0; font-size: 12.5px;">
+          <span style="width: 25%; color: ${bucket.items[0].color || "#111111"}; font-weight: 600;">${escapeHtml(bucket.items[0].str)}</span>
+          <span style="width: 25%; color: #555555; font-weight: 400;">${escapeHtml(bucket.items[1].str)}</span>
+          <span style="width: 25%; color: ${bucket.items[2].color || "#111111"}; font-weight: 600;">${escapeHtml(bucket.items[2].str)}</span>
+          <span style="width: 25%; text-align: right; color: #555555; font-weight: 400;">${escapeHtml(bucket.items[3].str)}</span>
         </div>
       `);
       continue;
+    }
+
+    // Standalone project/job title row
+    if (first.isBold && bucket.items.length === 1 && first.fontSize >= 9) {
+      const isTitleCandidate =
+        first.str.includes("Quranic") ||
+        first.str.includes("Absensiku") ||
+        (first.str.length < 40 && !first.str.endsWith(".") && !first.str.includes(","));
+      if (isTitleCandidate) {
+        const titleContent = first.url
+          ? `<a href="${first.url}" target="_blank" rel="noopener noreferrer" style="color: ${first.color || "#111111"}; text-decoration: underline; font-weight: 700;">${escapeHtml(first.str)}</a>`
+          : escapeHtml(first.str);
+        output.push(`
+          <div style="font-size: 13px; font-weight: 700; color: ${first.color || "#111111"}; margin-top: 10px; margin-bottom: 2px;">
+            ${titleContent}
+          </div>
+        `);
+        continue;
+      }
     }
 
     // Subtitle / Job role / School name line
@@ -526,9 +678,17 @@ function renderPageBuckets(
         </div>
       `);
     } else {
+      const lineHtml = bucket.items
+        .map((it) => {
+          if (it.url) {
+            return `<a href="${it.url}" target="_blank" rel="noopener noreferrer" style="color: #0a66c2; text-decoration: underline;">${escapeHtml(it.str)}</a>`;
+          }
+          return escapeHtml(it.str);
+        })
+        .join(" ");
       output.push(`
-        <p style="margin: 4px 0 8px 0; font-size: 12px; line-height: 1.55; color: ${first.color || "#333333"};">
-          ${escapeHtml(fullLineStr)}
+        <p style="margin: 4px 0 8px 0; font-size: 12.5px; line-height: 1.55; color: ${first.color || "#222222"}; font-weight: 400;">
+          ${lineHtml}
         </p>
       `);
     }
