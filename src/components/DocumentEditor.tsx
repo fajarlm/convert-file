@@ -31,6 +31,9 @@ import {
   RemoveFormatting,
   ZoomIn,
   ZoomOut,
+  Link as LinkIcon,
+  Unlink,
+  ExternalLink,
 } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/lib/types";
 import { useAppTheme } from "@/context/ThemeContext";
@@ -62,6 +65,152 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
   const [isTranslatingSelection, setIsTranslatingSelection] = useState(false);
   const [translatedSelection, setTranslatedSelection] = useState("");
   const [isFormattingAI, setIsFormattingAI] = useState(false);
+
+  // Insert / Edit Link state & controls
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [linkText, setLinkText] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+  const activeLinkElRef = useRef<HTMLAnchorElement | null>(null);
+  const [hasActiveLink, setHasActiveLink] = useState(false);
+  const savedLinkRangeRef = useRef<Range | null>(null);
+
+  const handleOpenLinkModal = useCallback(() => {
+    const selection = window.getSelection();
+    let anchor: HTMLAnchorElement | null = null;
+    if (selection && selection.anchorNode) {
+      const node =
+        selection.anchorNode.nodeType === Node.TEXT_NODE
+          ? selection.anchorNode.parentElement
+          : (selection.anchorNode as HTMLElement);
+      anchor = node?.closest("a") as HTMLAnchorElement | null;
+    }
+
+    if (anchor) {
+      activeLinkElRef.current = anchor;
+      setHasActiveLink(true);
+      setLinkText(anchor.textContent || "");
+      setLinkUrl(anchor.getAttribute("href") || "");
+      savedLinkRangeRef.current = null;
+    } else {
+      activeLinkElRef.current = null;
+      setHasActiveLink(false);
+      const text = selection ? selection.toString().trim() : "";
+      setLinkText(text);
+      setLinkUrl("");
+      if (selection && selection.rangeCount > 0) {
+        savedLinkRangeRef.current = selection.getRangeAt(0).cloneRange();
+      } else {
+        savedLinkRangeRef.current = null;
+      }
+    }
+    setIsLinkModalOpen(true);
+  }, []);
+
+  const handleApplyLink = () => {
+    let url = linkUrl.trim();
+    if (!url) {
+      alert("Masukkan alamat URL target (contoh: https://fajarlm.vercel.app atau mailto:...)");
+      return;
+    }
+    if (
+      !url.startsWith("http://") &&
+      !url.startsWith("https://") &&
+      !url.startsWith("mailto:") &&
+      !url.startsWith("tel:") &&
+      !url.startsWith("#")
+    ) {
+      url = "https://" + url;
+    }
+
+    const anchor = activeLinkElRef.current;
+    if (anchor) {
+      anchor.setAttribute("href", url);
+      if (linkText.trim()) anchor.textContent = linkText.trim();
+      anchor.style.color = "inherit";
+      anchor.style.textDecoration = "none";
+      if (url.startsWith("http")) {
+        anchor.setAttribute("target", "_blank");
+        anchor.setAttribute("rel", "noopener noreferrer");
+      }
+    } else if (savedLinkRangeRef.current) {
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(savedLinkRangeRef.current);
+
+      const selectedStr = savedLinkRangeRef.current.toString().trim();
+      const textToUse = linkText.trim() || selectedStr || url;
+
+      if (selectedStr.length > 0) {
+        document.execCommand("createLink", false, url);
+        const anchors = editorRef.current?.querySelectorAll(`a[href="${url}"]`);
+        if (anchors && anchors.length > 0) {
+          const lastAnchor = anchors[anchors.length - 1] as HTMLAnchorElement;
+          if (linkText.trim()) lastAnchor.textContent = linkText.trim();
+          lastAnchor.style.color = "inherit";
+          lastAnchor.style.textDecoration = "none";
+          if (url.startsWith("http")) {
+            lastAnchor.setAttribute("target", "_blank");
+            lastAnchor.setAttribute("rel", "noopener noreferrer");
+          }
+        }
+      } else {
+        const a = document.createElement("a");
+        a.href = url;
+        a.textContent = textToUse;
+        a.style.color = "inherit";
+        a.style.textDecoration = "none";
+        if (url.startsWith("http")) {
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+        }
+        savedLinkRangeRef.current.insertNode(a);
+      }
+    } else if (editorRef.current) {
+      const a = document.createElement("a");
+      a.href = url;
+      a.textContent = linkText.trim() || url;
+      a.style.color = "inherit";
+      a.style.textDecoration = "none";
+      if (url.startsWith("http")) {
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+      }
+      editorRef.current.appendChild(a);
+    }
+
+    if (editorRef.current) onChange(editorRef.current.innerHTML);
+    setIsLinkModalOpen(false);
+    activeLinkElRef.current = null;
+    setHasActiveLink(false);
+    savedLinkRangeRef.current = null;
+  };
+
+  const handleRemoveLink = () => {
+    const anchor = activeLinkElRef.current;
+    if (anchor) {
+      const parent = anchor.parentNode;
+      while (anchor.firstChild) {
+        parent?.insertBefore(anchor.firstChild, anchor);
+      }
+      anchor.remove();
+      if (editorRef.current) onChange(editorRef.current.innerHTML);
+    }
+    setIsLinkModalOpen(false);
+    activeLinkElRef.current = null;
+    setHasActiveLink(false);
+    savedLinkRangeRef.current = null;
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        handleOpenLinkModal();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleOpenLinkModal]);
 
   // Selected Image Resize state & controls (using ref to satisfy React compiler immutability)
   const selectedImgRef = useRef<HTMLImageElement | null>(null);
@@ -148,6 +297,20 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
 
   const handleCanvasClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
+
+    // Check if user clicked an anchor tag (link) to inspect/edit it
+    const anchor = target.closest("a") as HTMLAnchorElement | null;
+    if (anchor && !target.closest("#link-editor-modal")) {
+      e.preventDefault();
+      activeLinkElRef.current = anchor;
+      setHasActiveLink(true);
+      setLinkText(anchor.textContent || "");
+      setLinkUrl(anchor.getAttribute("href") || "");
+      savedLinkRangeRef.current = null;
+      setIsLinkModalOpen(true);
+      return;
+    }
+
     if (target.tagName.toLowerCase() === "img") {
       const img = target as HTMLImageElement;
       if (selectedImgRef.current && selectedImgRef.current !== img) {
@@ -638,6 +801,25 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
 
           <span className="h-4 w-px bg-current/20 mx-1" />
 
+          {/* Link Tool */}
+          <button
+            type="button"
+            onClick={handleOpenLinkModal}
+            title="Sisipkan / Edit Tautan Link (Ctrl+K)"
+            className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded cursor-pointer ${
+              theme === "retro"
+                ? "bg-[#c0c0c0] border-t border-l border-t-white border-l-white border-b border-r border-b-black border-r-black text-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white font-bold"
+                : theme === "brutalist"
+                ? "border-2 border-black bg-white text-black shadow-[1px_1px_0px_#000]"
+                : "border border-current/20 hover:bg-current/10"
+            }`}
+          >
+            <LinkIcon className="h-3.5 w-3.5 text-blue-400" />
+            <span>+ Link</span>
+          </button>
+
+          <span className="h-4 w-px bg-current/20 mx-1" />
+
           {/* Table Tools */}
           <button
             type="button"
@@ -880,6 +1062,157 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Insert / Edit Link Modal */}
+      {isLinkModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-100">
+          <div
+            id="link-editor-modal"
+            className={`w-full max-w-md flex flex-col gap-3 p-5 rounded-2xl border shadow-2xl animate-in zoom-in-95 duration-150 ${
+              theme === "retro"
+                ? "bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black font-mono text-black"
+                : theme === "brutalist"
+                ? "border-4 border-black bg-white text-black shadow-[6px_6px_0px_#000]"
+                : theme === "minimal"
+                ? "border border-zinc-200 bg-white text-zinc-900 shadow-xl"
+                : "border border-cyan-500/30 bg-[#0E101C] text-white shadow-[0_0_35px_rgba(6,182,212,0.25)]"
+            }`}
+          >
+            <div className="flex items-center justify-between border-b border-current/15 pb-2.5">
+              <div className="flex items-center gap-2">
+                <LinkIcon className="h-4 w-4 text-cyan-400" />
+                <h3 className="text-sm font-bold uppercase tracking-wide">
+                  {hasActiveLink ? "Edit Tautan (Link)" : "Sisipkan Tautan Baru (Link)"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsLinkModalOpen(false)}
+                className="p-1 rounded hover:bg-current/10 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3 text-xs">
+              <div>
+                <label className="block font-semibold mb-1 opacity-80">
+                  Teks Tautan (Display Text):
+                </label>
+                <input
+                  type="text"
+                  value={linkText}
+                  onChange={(e) => setLinkText(e.target.value)}
+                  placeholder="Misal: fajarlm.vercel.app atau LinkedIn"
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-current/20 bg-black/5 dark:bg-white/5 focus:outline-hidden focus:border-cyan-400"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1 opacity-80">
+                  Alamat URL Target:
+                </label>
+                <input
+                  type="text"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="https://fajarlm.vercel.app atau mailto:..."
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-current/20 bg-black/5 dark:bg-white/5 focus:outline-hidden focus:border-cyan-400 font-mono"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleApplyLink();
+                    }
+                  }}
+                  autoFocus
+                />
+              </div>
+
+              {/* Quick prefix helpers */}
+              <div className="flex items-center gap-1.5 pt-0.5">
+                <span className="text-[11px] opacity-60">Awalan cepat:</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLinkUrl((prev) =>
+                      prev.startsWith("https://") ? prev : "https://" + prev.replace(/^https?:\/\//, "")
+                    )
+                  }
+                  className="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-current/10 hover:bg-current/20 cursor-pointer"
+                >
+                  https://
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLinkUrl((prev) =>
+                      prev.startsWith("mailto:") ? prev : "mailto:" + prev.replace(/^mailto:/, "")
+                    )
+                  }
+                  className="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-current/10 hover:bg-current/20 cursor-pointer"
+                >
+                  mailto:
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLinkUrl((prev) => (prev.startsWith("tel:") ? prev : "tel:" + prev.replace(/^tel:/, "")))
+                  }
+                  className="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-current/10 hover:bg-current/20 cursor-pointer"
+                >
+                  tel:
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-current/15 mt-1">
+              <div>
+                {hasActiveLink && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveLink}
+                    title="Hapus Tautan (Jadikan Teks Biasa)"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded text-rose-500 hover:bg-rose-500/10 cursor-pointer"
+                  >
+                    <Unlink className="h-3.5 w-3.5" />
+                    <span>Hapus Link</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {linkUrl && (
+                  <a
+                    href={linkUrl.startsWith("http") ? linkUrl : `https://${linkUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Uji buka link di tab baru"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded hover:bg-current/10 cursor-pointer opacity-80"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    <span>Tes Link</span>
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsLinkModalOpen(false)}
+                  className="px-3 py-1.5 text-xs font-semibold rounded hover:bg-current/10 cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplyLink}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer shadow-xs active:scale-95 transition-all"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  <span>Terapkan Tautan</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

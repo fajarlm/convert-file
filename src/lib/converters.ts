@@ -167,18 +167,18 @@ interface PdfVisualItem {
 function getContactSvg(type: "phone" | "email" | "linkedin" | "github" | "website" | "location"): string {
   switch (type) {
     case "phone":
-      return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1.5px;flex-shrink:0;color:#4b5563;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`;
+      return `<svg width="13" height="13" viewBox="0 0 24 24" fill="#111111" style="display:inline-block;vertical-align:-1.5px;flex-shrink:0;"><path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>`;
     case "email":
-      return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1.5px;flex-shrink:0;color:#4b5563;"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>`;
+      return `<svg width="13" height="13" viewBox="0 0 24 24" fill="#111111" style="display:inline-block;vertical-align:-1.5px;flex-shrink:0;"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>`;
     case "linkedin":
-      return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1.5px;flex-shrink:0;color:#0a66c2;"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>`;
+      return `<svg width="13" height="13" viewBox="0 0 24 24" style="display:inline-block;vertical-align:-1.5px;flex-shrink:0;"><rect width="24" height="24" rx="3" fill="#111111"/><path fill="#ffffff" d="M19 19h-3.4v-5.3c0-1.3-.5-2.1-1.6-2.1-.9 0-1.4.6-1.6 1.2-.1.2-.1.5-.1.8V19H8.9s.1-9.2 0-10.2h3.4v1.5c.5-.7 1.3-1.8 3.2-1.8 2.3 0 4.1 1.5 4.1 4.8V19zM5.7 7.4c-1.2 0-1.9-.8-1.9-1.8 0-1 .8-1.8 2-1.8 1.2 0 1.9.8 1.9 1.8 0 1-.7 1.8-2 1.8zM4 19h3.4V8.8H4V19z"/></svg>`;
     case "github":
-      return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1.5px;flex-shrink:0;color:#181717;"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>`;
+      return `<svg width="13" height="13" viewBox="0 0 24 24" fill="#111111" style="display:inline-block;vertical-align:-1.5px;flex-shrink:0;"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>`;
     case "website":
-      return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1.5px;flex-shrink:0;color:#4b5563;"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`;
+      return `<svg width="13" height="13" viewBox="0 0 24 24" fill="#111111" style="display:inline-block;vertical-align:-1.5px;flex-shrink:0;"><path d="M4 2l16 11.5-7.5 1.5 4.5 7.5-3 1.5-4.5-7.5-5.5 5.5V2z"/></svg>`;
     case "location":
     default:
-      return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1.5px;flex-shrink:0;color:#4b5563;"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>`;
+      return `<svg width="13" height="13" viewBox="0 0 24 24" fill="#111111" style="display:inline-block;vertical-align:-1.5px;flex-shrink:0;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`;
   }
 }
 
@@ -432,9 +432,22 @@ async function extractTextFromPdf(
       });
     }
 
+    // Deduplicate overlapping items (where later operator paints over earlier operator at same position)
+    const dedupedItems: PdfVisualItem[] = [];
+    for (const item of rawItems) {
+      const existingIdx = dedupedItems.findIndex(
+        (prev) => Math.abs(prev.x - item.x) < 4 && Math.abs(prev.y - item.y) < 3
+      );
+      if (existingIdx !== -1) {
+        dedupedItems[existingIdx] = item;
+      } else {
+        dedupedItems.push(item);
+      }
+    }
+
     // Group items into visual rows by similar Y (within 4.5px)
     const lineBuckets: Array<{ y: number; items: PdfVisualItem[] }> = [];
-    for (const item of rawItems) {
+    for (const item of dedupedItems) {
       const existing = lineBuckets.find((b) => Math.abs(b.y - item.y) <= 4.5);
       if (existing) {
         existing.items.push(item);
@@ -489,7 +502,7 @@ async function extractTextFromPdf(
 
       const contactsHtml =
         contactItems.length > 0
-          ? `<div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #4b5563; min-width: 200px;">
+          ? `<div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #111111; min-width: 200px;">
               ${contactItems
                 .map((c) => {
                   const parsed = parseContactItem(c);
@@ -497,10 +510,10 @@ async function extractTextFromPdf(
                   const content = parsed.href
                     ? `<a href="${parsed.href}" ${
                         parsed.href.startsWith("http") ? 'target="_blank" rel="noopener noreferrer"' : ""
-                      } style="color: ${parsed.type === "linkedin" ? "#0a66c2" : "inherit"}; text-decoration: none;">${escapeHtml(
+                      } style="color: #111111; text-decoration: none;">${escapeHtml(
                         parsed.label
                       )}</a>`
-                    : `<span>${escapeHtml(parsed.label)}</span>`;
+                    : `<span style="color: #111111;">${escapeHtml(parsed.label)}</span>`;
                   return `
                     <div style="display: flex; align-items: center; justify-content: flex-start; gap: 7px; line-height: 1.45;">
                       ${iconSvg}
@@ -513,7 +526,7 @@ async function extractTextFromPdf(
           : "";
 
       pageElements.push(`
-        <div class="pdf-cv-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding-bottom: 20px; border-bottom: 1.5px solid #222222; margin-bottom: 24px;">
+        <div class="pdf-cv-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding-bottom: 20px; border-bottom: 1px dotted #888888; margin-bottom: 20px;">
           <div style="display: flex; align-items: flex-start; gap: 20px;">
             ${photoHtml}
             <div>
@@ -582,8 +595,7 @@ function renderPageBuckets(
     // Normalize common PDF text extraction splits
     fullLineStr = fullLineStr
       .replace(/\bSUMM\s+ARY\b/gi, "SUMMARY")
-      .replace(/\bL\s+ANGUAGES\b/gi, "LANGUAGES")
-      .replace(/\bEXPERIENCE\s+PROJECTS\b/gi, "EXPERIENCE / PROJECTS");
+      .replace(/\bL\s+ANGUAGES\b/gi, "LANGUAGES");
 
     // Check if section heading (e.g. SUMMARY, EXPERIENCE, PROJECTS, EDUCATION, CERTIFICATES, SKILLS, LANGUAGES)
     const isHeading =
@@ -596,7 +608,7 @@ function renderPageBuckets(
 
     if (isHeading) {
       output.push(`
-        <h2 style="font-size: 14px; font-weight: 700; text-transform: uppercase; color: ${first.color || "#111111"}; border-bottom: 1.5px solid #222222; padding-bottom: 4px; margin-top: 22px; margin-bottom: 12px; letter-spacing: 0.8px;">
+        <h2 style="font-size: 14px; font-weight: 700; text-transform: uppercase; color: ${first.color || "#111111"}; border-bottom: 1px dotted #888888; padding-bottom: 4px; margin-top: 22px; margin-bottom: 12px; letter-spacing: 0.8px;">
           ${escapeHtml(fullLineStr)}
         </h2>
       `);
@@ -608,7 +620,7 @@ function renderPageBuckets(
       const left = bucket.items[0];
       const right = bucket.items[1];
       const leftContent = left.url
-        ? `<a href="${left.url}" target="_blank" rel="noopener noreferrer" style="color: ${left.color || "#111111"}; text-decoration: underline; font-weight: 700;">${escapeHtml(left.str)}</a>`
+        ? `<a href="${left.url}" target="_blank" rel="noopener noreferrer" style="color: ${left.color || "#111111"}; text-decoration: none; font-weight: 700;">${escapeHtml(left.str)}</a>`
         : escapeHtml(left.str);
       output.push(`
         <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; margin-bottom: 2px;">
@@ -652,7 +664,7 @@ function renderPageBuckets(
         (first.str.length < 40 && !first.str.endsWith(".") && !first.str.includes(","));
       if (isTitleCandidate) {
         const titleContent = first.url
-          ? `<a href="${first.url}" target="_blank" rel="noopener noreferrer" style="color: ${first.color || "#111111"}; text-decoration: underline; font-weight: 700;">${escapeHtml(first.str)}</a>`
+          ? `<a href="${first.url}" target="_blank" rel="noopener noreferrer" style="color: ${first.color || "#111111"}; text-decoration: none; font-weight: 700;">${escapeHtml(first.str)}</a>`
           : escapeHtml(first.str);
         output.push(`
           <div style="font-size: 13px; font-weight: 700; color: ${first.color || "#111111"}; margin-top: 10px; margin-bottom: 2px;">
@@ -681,7 +693,7 @@ function renderPageBuckets(
       const lineHtml = bucket.items
         .map((it) => {
           if (it.url) {
-            return `<a href="${it.url}" target="_blank" rel="noopener noreferrer" style="color: #0a66c2; text-decoration: underline;">${escapeHtml(it.str)}</a>`;
+            return `<a href="${it.url}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">${escapeHtml(it.str)}</a>`;
           }
           return escapeHtml(it.str);
         })
