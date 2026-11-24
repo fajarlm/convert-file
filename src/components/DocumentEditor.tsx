@@ -29,6 +29,8 @@ import {
   AlignJustify,
   Printer,
   RemoveFormatting,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/lib/types";
 import { useAppTheme } from "@/context/ThemeContext";
@@ -60,6 +62,113 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
   const [isTranslatingSelection, setIsTranslatingSelection] = useState(false);
   const [translatedSelection, setTranslatedSelection] = useState("");
   const [isFormattingAI, setIsFormattingAI] = useState(false);
+
+  // Selected Image Resize state & controls (using ref to satisfy React compiler immutability)
+  const selectedImgRef = useRef<HTMLImageElement | null>(null);
+  const [hasSelectedImg, setHasSelectedImg] = useState<boolean>(false);
+  const [imgToolbarPos, setImgToolbarPos] = useState<{ x: number; y: number } | null>(null);
+  const [imgWidth, setImgWidth] = useState<number>(80);
+
+  const updateImgPos = (img: HTMLImageElement) => {
+    const rect = img.getBoundingClientRect();
+    const x = Math.max(10, Math.min(window.innerWidth - 440, rect.left + rect.width / 2 - 210));
+    const y = Math.max(65, rect.top - 58);
+    setImgToolbarPos({ x, y });
+  };
+
+  const handleShrink = () => {
+    const img = selectedImgRef.current;
+    if (!img) return;
+    const cur = img.offsetWidth || 80;
+    const nw = Math.max(30, Math.round(cur * 0.85));
+    img.style.width = `${nw}px`;
+    img.style.height = "auto";
+    setImgWidth(nw);
+    updateImgPos(img);
+    if (editorRef.current) onChange(editorRef.current.innerHTML);
+  };
+
+  const handleEnlarge = () => {
+    const img = selectedImgRef.current;
+    if (!img) return;
+    const cur = img.offsetWidth || 80;
+    const nw = Math.min(800, Math.round(cur * 1.15));
+    img.style.width = `${nw}px`;
+    img.style.height = "auto";
+    setImgWidth(nw);
+    updateImgPos(img);
+    if (editorRef.current) onChange(editorRef.current.innerHTML);
+  };
+
+  const handleSetWidth = (wPx: number | string) => {
+    const img = selectedImgRef.current;
+    if (!img) return;
+    if (typeof wPx === "number") {
+      img.style.width = `${wPx}px`;
+      setImgWidth(wPx);
+    } else {
+      img.style.width = wPx;
+      setImgWidth(img.offsetWidth || 300);
+    }
+    img.style.height = "auto";
+    updateImgPos(img);
+    if (editorRef.current) onChange(editorRef.current.innerHTML);
+  };
+
+  const handleSetImageAlign = (align: "left" | "center" | "right") => {
+    const img = selectedImgRef.current;
+    if (!img) return;
+    if (align === "center") {
+      img.style.display = "block";
+      img.style.marginLeft = "auto";
+      img.style.marginRight = "auto";
+      img.style.float = "none";
+    } else if (align === "left") {
+      img.style.display = "inline-block";
+      img.style.float = "left";
+      img.style.margin = "8px 16px 8px 0";
+    } else {
+      img.style.display = "inline-block";
+      img.style.float = "right";
+      img.style.margin = "8px 0 8px 16px";
+    }
+    updateImgPos(img);
+    if (editorRef.current) onChange(editorRef.current.innerHTML);
+  };
+
+  const handleDeleteImg = () => {
+    const img = selectedImgRef.current;
+    if (!img) return;
+    img.remove();
+    selectedImgRef.current = null;
+    setHasSelectedImg(false);
+    setImgToolbarPos(null);
+    if (editorRef.current) onChange(editorRef.current.innerHTML);
+  };
+
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName.toLowerCase() === "img") {
+      const img = target as HTMLImageElement;
+      if (selectedImgRef.current && selectedImgRef.current !== img) {
+        selectedImgRef.current.style.outline = "";
+      }
+      img.style.outline = "2px dashed #2563eb";
+      img.style.outlineOffset = "3px";
+      selectedImgRef.current = img;
+      setHasSelectedImg(true);
+      const curW = img.offsetWidth || 80;
+      setImgWidth(curW);
+      updateImgPos(img);
+    } else if (!target.closest("#image-floating-toolbar")) {
+      if (selectedImgRef.current) {
+        selectedImgRef.current.style.outline = "";
+        selectedImgRef.current = null;
+        setHasSelectedImg(false);
+        setImgToolbarPos(null);
+      }
+    }
+  };
 
   const handleAIFormat = async () => {
     setIsFormattingAI(true);
@@ -225,12 +334,20 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
     setTranslatedSelection("");
   };
 
-  // Close floating bubble when clicking outside
+  // Close floating bubble & image toolbar when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (!target.closest("#translation-bubble") && !target.closest("#document-editor-canvas")) {
         setBubblePosition(null);
+      }
+      if (!target.closest("#image-floating-toolbar") && target.tagName.toLowerCase() !== "img") {
+        if (selectedImgRef.current) {
+          selectedImgRef.current.style.outline = "";
+          selectedImgRef.current = null;
+          setHasSelectedImg(false);
+          setImgToolbarPos(null);
+        }
       }
     };
     window.addEventListener("mousedown", handleClickOutside);
@@ -764,6 +881,148 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
         </div>
       )}
 
+      {/* Floating Image Control Toolbar (Perkecil & Perbesar) */}
+      {hasSelectedImg && imgToolbarPos && (
+        <div
+          id="image-floating-toolbar"
+          style={{
+            position: "fixed",
+            left: `${imgToolbarPos.x}px`,
+            top: `${imgToolbarPos.y}px`,
+          }}
+          className={`z-50 flex flex-wrap items-center gap-1.5 p-2 rounded-xl border shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 ${
+            theme === "retro"
+              ? "bg-[#c0c0c0] border-t-2 border-l-2 border-t-white border-l-white border-b-2 border-r-2 border-b-black border-r-black font-mono text-black"
+              : theme === "brutalist"
+              ? "border-3 border-black bg-white text-black shadow-[4px_4px_0px_#000]"
+              : theme === "minimal"
+              ? "border border-zinc-200 bg-white/95 text-zinc-800"
+              : "border border-cyan-500/30 bg-[#0E101C]/95 text-white shadow-[0_0_25px_rgba(6,182,212,0.3)]"
+          }`}
+        >
+          {/* Quick Step Buttons */}
+          <button
+            type="button"
+            onClick={handleShrink}
+            title="Perkecil Ukuran Foto (-15%)"
+            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold rounded hover:bg-current/10 active:scale-95 cursor-pointer"
+          >
+            <ZoomOut className="h-3.5 w-3.5 text-rose-400" />
+            <span>Perkecil</span>
+          </button>
+
+          <span className="px-1.5 py-0.5 text-[11px] font-mono font-bold rounded bg-black/10 dark:bg-white/10 border border-current/20">
+            {imgWidth}px
+          </span>
+
+          <button
+            type="button"
+            onClick={handleEnlarge}
+            title="Perbesar Ukuran Foto (+15%)"
+            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold rounded hover:bg-current/10 active:scale-95 cursor-pointer"
+          >
+            <ZoomIn className="h-3.5 w-3.5 text-emerald-400" />
+            <span>Perbesar</span>
+          </button>
+
+          <span className="h-4 w-px bg-current/20 mx-0.5" />
+
+          {/* Quick Size Presets */}
+          <div className="flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={() => handleSetWidth(50)}
+              title="Ukuran Kecil (50px)"
+              className={`px-1.5 py-0.5 text-[10px] font-bold rounded hover:bg-current/10 cursor-pointer ${
+                imgWidth === 50 ? "bg-current/15 font-black text-cyan-400" : ""
+              }`}
+            >
+              50px
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetWidth(80)}
+              title="Ukuran Standar CV (80px)"
+              className={`px-1.5 py-0.5 text-[10px] font-bold rounded hover:bg-current/10 cursor-pointer ${
+                imgWidth === 80 ? "bg-current/15 font-black text-cyan-400" : ""
+              }`}
+            >
+              80px
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetWidth(120)}
+              title="Ukuran Sedang (120px)"
+              className={`px-1.5 py-0.5 text-[10px] font-bold rounded hover:bg-current/10 cursor-pointer ${
+                imgWidth === 120 ? "bg-current/15 font-black text-cyan-400" : ""
+              }`}
+            >
+              120px
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetWidth(160)}
+              title="Ukuran Besar (160px)"
+              className={`px-1.5 py-0.5 text-[10px] font-bold rounded hover:bg-current/10 cursor-pointer ${
+                imgWidth === 160 ? "bg-current/15 font-black text-cyan-400" : ""
+              }`}
+            >
+              160px
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetWidth("100%")}
+              title="Lebar Penuh (100%)"
+              className="px-1.5 py-0.5 text-[10px] font-bold rounded hover:bg-current/10 cursor-pointer"
+            >
+              100%
+            </button>
+          </div>
+
+          <span className="h-4 w-px bg-current/20 mx-0.5" />
+
+          {/* Alignment */}
+          <div className="flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={() => handleSetImageAlign("left")}
+              title="Rata Kiri"
+              className="p-1 rounded hover:bg-current/10 cursor-pointer"
+            >
+              <AlignLeft className="h-3 w-3" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetImageAlign("center")}
+              title="Rata Tengah"
+              className="p-1 rounded hover:bg-current/10 cursor-pointer"
+            >
+              <AlignCenter className="h-3 w-3" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetImageAlign("right")}
+              title="Rata Kanan"
+              className="p-1 rounded hover:bg-current/10 cursor-pointer"
+            >
+              <AlignRight className="h-3 w-3" />
+            </button>
+          </div>
+
+          <span className="h-4 w-px bg-current/20 mx-0.5" />
+
+          {/* Delete */}
+          <button
+            type="button"
+            onClick={handleDeleteImg}
+            title="Hapus Foto"
+            className="p-1 text-rose-400 hover:bg-rose-500/20 rounded cursor-pointer"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Main WYSIWYG Document Canvas */}
       <div
         className={`relative flex-1 p-4 sm:p-8 overflow-y-auto max-h-[750px] ${
@@ -782,6 +1041,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
           contentEditable={true}
           suppressContentEditableWarning={true}
           onInput={handleInput}
+          onClick={handleCanvasClick}
           onMouseUp={handleMouseUp}
           onKeyUp={handleMouseUp}
           className={`min-h-[500px] w-full max-w-5xl mx-auto focus:outline-hidden text-sm sm:text-base leading-relaxed ${

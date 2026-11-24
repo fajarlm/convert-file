@@ -3,7 +3,7 @@ import mammoth from "mammoth";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { SupportedFormat, TargetOption, LoadedDocument } from "./types";
-import { smartFormatLocal, ExtractedImage } from "./formatter";
+import { ExtractedImage } from "./formatter";
 
 export function getFileExtension(filename: string): SupportedFormat {
   const parts = filename.split(".");
@@ -153,6 +153,20 @@ function convertPdfImageToDataUrl(imgObj: PdfImageObject | null | undefined): st
   }
 }
 
+interface PdfVisualItem {
+  str: string;
+  x: number;
+  y: number;
+  fontSize: number;
+  isBold: boolean;
+  color: string;
+  fontName: string;
+}
+
+interface PageImageItem extends ExtractedImage {
+  pageNum: number;
+}
+
 async function extractTextFromPdf(
   buffer: ArrayBuffer
 ): Promise<{ text: string; html: string; images: string[] }> {
@@ -172,7 +186,7 @@ async function extractTextFromPdf(
   const pdfDoc = await loadingTask.promise;
   const numPages = pdfDoc.numPages;
   const allPageTexts: string[] = [];
-  const allExtractedImages: ExtractedImage[] = [];
+  const allExtractedImages: PageImageItem[] = [];
 
   function multiplyTransforms(m1: number[], m2: number[]): number[] {
     return [
@@ -185,89 +199,23 @@ async function extractTextFromPdf(
     ];
   }
 
+  const pageSheetsHtml: string[] = [];
+
   for (let pageNum = 1; pageNum <= numPages; pageNum++) {
     const page = await pdfDoc.getPage(pageNum);
     const unscaledViewport = page.getViewport({ scale: 1.0 });
 
-    // 1. Structured Text extraction
-    const textContent = await page.getTextContent();
-    const rawItems: Array<{
-      str: string;
-      x: number;
-      y: number;
-      fontSize: number;
-      isBold: boolean;
-    }> = [];
-
-    for (const rawItem of textContent.items) {
-      if (!rawItem || typeof rawItem !== "object") continue;
-      const item = rawItem as { str?: string; transform?: number[]; fontName?: string };
-      if (!item.str || !item.str.trim()) continue;
-
-      const transform = item.transform || [1, 0, 0, 1, 0, 0];
-      const x = Math.round(transform[4]);
-      const y = Math.round(unscaledViewport.height - transform[5]);
-      const fontSize = Math.max(9, Math.round(Math.hypot(transform[0], transform[1])));
-      const fontName = (item.fontName || "").toLowerCase();
-      const isBold =
-        fontName.includes("bold") ||
-        fontName.includes("b1") ||
-        fontName.includes("b2") ||
-        fontName.includes("black") ||
-        fontName.includes("heavy") ||
-        fontSize >= 18;
-
-      rawItems.push({
-        str: item.str,
-        x,
-        y,
-        fontSize,
-        isBold,
-      });
-    }
-
-    // Sort items top-to-bottom (y), then left-to-right (x)
-    rawItems.sort((a, b) => {
-      const yDiff = a.y - b.y;
-      if (Math.abs(yDiff) > 5) return yDiff;
-      return a.x - b.x;
-    });
-
-    // Group items into logical lines based on similar y coordinate
-    const lineBuckets: Array<{ y: number; items: typeof rawItems }> = [];
-    for (const item of rawItems) {
-      const existing = lineBuckets.find((b) => Math.abs(b.y - item.y) <= 4);
-      if (existing) {
-        existing.items.push(item);
-      } else {
-        lineBuckets.push({ y: item.y, items: [item] });
-      }
-    }
-
-    lineBuckets.sort((a, b) => a.y - b.y);
-
-    const pageLines: string[] = [];
-    for (const bucket of lineBuckets) {
-      bucket.items.sort((a, b) => a.x - b.x);
-      const lineStr = bucket.items.map((it) => it.str).join(" ").trim();
-      if (lineStr) {
-        pageLines.push(lineStr);
-      }
-    }
-
-    if (pageLines.length > 0) {
-      allPageTexts.push(pageLines.join("\n"));
-    }
-
-    // 2. High-Fidelity Image Extraction (Photos, Avatars, Logos, Figures)
+    // 1. High-Fidelity Image Extraction for this page
+    const pageImages: ExtractedImage[] = [];
+    let opList: { fnArray: number[]; argsArray: unknown[] } | null = null;
     try {
-      const opList = await page.getOperatorList();
+      opList = await page.getOperatorList();
       const matrixStack: number[][] = [[1, 0, 0, 1, 0, 0]];
       let currentMatrix = [1, 0, 0, 1, 0, 0];
 
       for (let i = 0; i < opList.fnArray.length; i++) {
         const fn = opList.fnArray[i];
-        const args = opList.argsArray[i];
+        const args = opList.argsArray[i] as unknown[];
 
         if (fn === pdfjsLib.OPS.save) {
           matrixStack.push([...currentMatrix]);
@@ -277,13 +225,13 @@ async function extractTextFromPdf(
           }
         } else if (fn === pdfjsLib.OPS.transform) {
           if (args && args.length === 6) {
-            currentMatrix = multiplyTransforms(currentMatrix, args);
+            currentMatrix = multiplyTransforms(currentMatrix, args as number[]);
           }
         } else if (
           fn === pdfjsLib.OPS.paintImageXObject ||
           fn === pdfjsLib.OPS.paintInlineImageXObject
         ) {
-          const imgId = args[0];
+          const imgId = args[0] as string;
           try {
             let timer: ReturnType<typeof setTimeout> | undefined;
             const imgObj = await new Promise<PdfImageObject | null>((resolve) => {
@@ -305,16 +253,18 @@ async function extractTextFromPdf(
                 const yBottom = currentMatrix[5];
                 const topDist = Math.round(unscaledViewport.height - (yBottom + imgH));
 
-                // Filter out 1x1 tracking dots or tiny divider lines (< 8px)
                 if (imgObj.width >= 8 && imgObj.height >= 8 && imgW >= 8 && imgH >= 8) {
-                  allExtractedImages.push({
+                  const item: PageImageItem = {
                     dataUrl,
                     x: Math.max(0, Math.round(currentMatrix[4])),
                     y: Math.max(0, topDist),
                     width: imgW,
                     height: imgH,
-                    isHeader: topDist < 350,
-                  });
+                    isHeader: topDist < 300,
+                    pageNum,
+                  };
+                  pageImages.push(item);
+                  allExtractedImages.push(item);
                 }
               }
             }
@@ -326,16 +276,263 @@ async function extractTextFromPdf(
     } catch (opErr) {
       console.warn("Operator list processing error:", opErr);
     }
+
+    // 2. Extract Operator List Text Colors
+    let curColor = "#222222";
+    const showTextColors: string[] = [];
+    if (opList) {
+      for (let i = 0; i < opList.fnArray.length; i++) {
+        const fn = opList.fnArray[i];
+        const args = opList.argsArray[i] as unknown[];
+        if (fn === pdfjsLib.OPS.setFillRGBColor) {
+          if (typeof args[0] === "string") {
+            curColor = args[0];
+          } else if (Array.isArray(args) && args.length >= 3) {
+            curColor =
+              "#" +
+              args
+                .slice(0, 3)
+                .map((c) =>
+                  Math.min(255, Math.max(0, Math.round(Number(c))))
+                    .toString(16)
+                    .padStart(2, "0")
+                )
+                .join("");
+          }
+        }
+        if (fn === pdfjsLib.OPS.showText) {
+          showTextColors.push(curColor);
+        }
+      }
+    }
+
+    // 3. Structured Text Extraction with Exact Coordinates & Colors
+    const textContent = await page.getTextContent();
+    const rawItems: PdfVisualItem[] = [];
+    let textIdx = 0;
+
+    for (const rawItem of textContent.items) {
+      if (!rawItem || typeof rawItem !== "object") continue;
+      const item = rawItem as { str?: string; transform?: number[]; fontName?: string; width?: number };
+      if (!item.str || !item.str.trim()) continue;
+
+      const transform = item.transform || [1, 0, 0, 1, 0, 0];
+      const x = Math.round(transform[4] * 10) / 10;
+      const y = Math.round((unscaledViewport.height - transform[5]) * 10) / 10;
+      const fontSize = Math.max(9, Math.round(Math.hypot(transform[0], transform[1]) * 10) / 10);
+      const fontName = (item.fontName || "").toLowerCase();
+      const isBold =
+        fontName.includes("bold") ||
+        fontName.includes("b1") ||
+        fontName.includes("b2") ||
+        fontName.includes("black") ||
+        fontName.includes("heavy") ||
+        fontSize >= 17;
+      const color = showTextColors[textIdx] || "#222222";
+      textIdx++;
+
+      rawItems.push({
+        str: item.str,
+        x,
+        y,
+        fontSize,
+        isBold,
+        color,
+        fontName,
+      });
+    }
+
+    // Group items into visual rows by similar Y (within 4.5px)
+    const lineBuckets: Array<{ y: number; items: PdfVisualItem[] }> = [];
+    for (const item of rawItems) {
+      const existing = lineBuckets.find((b) => Math.abs(b.y - item.y) <= 4.5);
+      if (existing) {
+        existing.items.push(item);
+      } else {
+        lineBuckets.push({ y: item.y, items: [item] });
+      }
+    }
+    lineBuckets.sort((a, b) => a.y - b.y);
+
+    // Save plain text for search and fallback
+    const pagePlainTextLines: string[] = [];
+    for (const b of lineBuckets) {
+      b.items.sort((i1, i2) => i1.x - i2.x);
+      pagePlainTextLines.push(b.items.map((it) => it.str).join(" "));
+    }
+    if (pagePlainTextLines.length > 0) {
+      allPageTexts.push(pagePlainTextLines.join("\n"));
+    }
+
+    // 4. Reconstruct High-Fidelity Visual Page Sheet
+    const pageElements: string[] = [];
+    const profileImg = pageImages.find((img) => img.isHeader);
+
+    // Check if Page 1 has top Header (photo + name + contacts at y < 145)
+    if (pageNum === 1 && (profileImg || lineBuckets.some((b) => b.y < 145 && b.items.some((it) => it.fontSize >= 15)))) {
+      const headerRows = lineBuckets.filter((b) => b.y < 145);
+      const headerItems = headerRows.flatMap((r) => r.items);
+      const nameItem = headerItems.find((it) => it.fontSize >= 16) || headerItems[0];
+      const roleItem = headerItems.find((it) => it !== nameItem && it.x < 250 && it.fontSize >= 10);
+      const contactItems = headerItems.filter((it) => it !== nameItem && it !== roleItem && (it.x >= 280 || it.str.includes("@") || it.str.includes("+") || it.str.includes(".com")));
+
+      const photoHtml = profileImg
+        ? `<div style="flex-shrink: 0;">
+            <img class="resizable-doc-img" src="${profileImg.dataUrl}" alt="Foto Profil" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1.5px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block; cursor: pointer;" />
+          </div>`
+        : "";
+
+      const contactsHtml =
+        contactItems.length > 0
+          ? `<div style="text-align: right; font-size: 11.5px; color: #444444; line-height: 1.6;">
+              ${contactItems.map((c) => `<div>${escapeHtml(c.str)}</div>`).join("")}
+            </div>`
+          : "";
+
+      pageElements.push(`
+        <div class="pdf-cv-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; padding-bottom: 20px; border-bottom: 1.5px solid #222222; margin-bottom: 24px;">
+          ${photoHtml}
+          <div style="flex: 1;">
+            <h1 style="font-size: 24px; font-weight: 800; color: ${nameItem?.color || "#222222"}; margin: 0 0 4px 0; letter-spacing: -0.5px;">${escapeHtml(nameItem?.str || "")}</h1>
+            ${roleItem ? `<div style="font-size: 13px; font-weight: 500; color: #555555;">${escapeHtml(roleItem.str)}</div>` : ""}
+          </div>
+          ${contactsHtml}
+        </div>
+      `);
+
+      // Filter out header rows from body processing
+      const bodyBuckets = lineBuckets.filter((b) => b.y >= 145);
+      renderPageBuckets(bodyBuckets, pageElements, unscaledViewport.height);
+    } else {
+      renderPageBuckets(lineBuckets, pageElements, unscaledViewport.height);
+    }
+
+    // Append any body images belonging to this page
+    const bodyImages = pageImages.filter((img) => img !== profileImg);
+    for (const bImg of bodyImages) {
+      pageElements.push(`
+        <div class="doc-body-image" style="text-align: center; margin: 20px 0;">
+          <img class="resizable-doc-img" src="${bImg.dataUrl}" alt="Gambar Dokumen" style="max-width: 100%; max-height: 400px; object-fit: contain; border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); display: inline-block; cursor: pointer;" />
+        </div>
+      `);
+    }
+
+    pageSheetsHtml.push(`
+      <div class="pdf-page-sheet" style="width: 100%; max-width: 794px; min-height: 1050px; margin: 0 auto 32px auto; background: #ffffff; padding: 48px 56px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); border-radius: 4px; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #222222; position: relative;">
+        ${pageElements.join("\n")}
+      </div>
+    `);
   }
 
   const rawText = allPageTexts.join("\n\n");
-  const fullHtml = smartFormatLocal(rawText, allExtractedImages);
+  const fullHtml = pageSheetsHtml.join("\n");
 
   return {
     text: rawText || "Dokumen PDF kosong atau berbasis gambar scan.",
     html: fullHtml,
     images: allExtractedImages.map((img) => img.dataUrl),
   };
+}
+
+function renderPageBuckets(
+  buckets: Array<{ y: number; items: PdfVisualItem[] }>,
+  output: string[],
+  pageHeight: number
+) {
+  for (const bucket of buckets) {
+    bucket.items.sort((a, b) => a.x - b.x);
+
+    // Page number at bottom (e.g. 1 / 2, 2 / 2)
+    if (bucket.y > pageHeight - 45) {
+      output.push(
+        `<div style="text-align: right; font-size: 11px; color: #888888; margin-top: 24px;">${escapeHtml(
+          bucket.items.map((it) => it.str).join(" ")
+        )}</div>`
+      );
+      continue;
+    }
+
+    const first = bucket.items[0];
+    const fullLineStr = bucket.items.map((it) => it.str).join(" ").trim();
+
+    // Check if section heading (e.g. SUMMARY, EXPERIENCE, PROJECTS, EDUCATION, CERTIFICATES, SKILLS, LANGUAGES)
+    const isHeading =
+      bucket.items.length <= 2 &&
+      (first.fontSize >= 10.5 || first.isBold) &&
+      (/^(ringkasan|summary|profil|profile|pengalaman|experience|proyek|projects|pendidikan|education|keahlian|skills|kemampuan|sertifikasi|certificates|bahasa|languages|awards|organisasi)/i.test(
+        fullLineStr
+      ) ||
+        (first.str === first.str.toUpperCase() && first.str.length >= 3 && !first.str.includes("@")));
+
+    if (isHeading) {
+      output.push(`
+        <h2 style="font-size: 13.5px; font-weight: 800; text-transform: uppercase; color: ${first.color || "#111111"}; border-bottom: 1.5px solid #222222; padding-bottom: 4px; margin-top: 24px; margin-bottom: 12px; letter-spacing: 0.8px;">
+          ${escapeHtml(fullLineStr)}
+        </h2>
+      `);
+      continue;
+    }
+
+    // Multi-column items with 2 items separated by a gap (e.g. Title on Left, Date on Right)
+    if (bucket.items.length === 2 && bucket.items[1].x - bucket.items[0].x > 120) {
+      const left = bucket.items[0];
+      const right = bucket.items[1];
+      output.push(`
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px; margin-bottom: 2px;">
+          <div style="font-size: 13px; font-weight: 700; color: ${left.color || "#222222"};">${escapeHtml(left.str)}</div>
+          <div style="font-size: 12px; color: #666666; font-style: normal; text-align: right;">${escapeHtml(right.str)}</div>
+        </div>
+      `);
+      continue;
+    }
+
+    // Multi-column items with 3 items (e.g. Soft Skill | Tech Skill | Level)
+    if (bucket.items.length === 3) {
+      output.push(`
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 12px; border-bottom: 1px dotted #e5e7eb;">
+          <span style="width: 45%; color: ${bucket.items[0].color || "#222222"}; font-weight: 500;">${escapeHtml(bucket.items[0].str)}</span>
+          <span style="width: 30%; color: ${bucket.items[1].color || "#222222"}; font-weight: 600;">${escapeHtml(bucket.items[1].str)}</span>
+          <span style="width: 25%; text-align: right; color: #555555;">${escapeHtml(bucket.items[2].str)}</span>
+        </div>
+      `);
+      continue;
+    }
+
+    // Multi-column items with 4 items (e.g. Language 1 | Level 1 | Language 2 | Level 2)
+    if (bucket.items.length === 4) {
+      output.push(`
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 12px; border-bottom: 1px dotted #e5e7eb;">
+          <span style="width: 25%; color: ${bucket.items[0].color || "#222222"}; font-weight: 600;">${escapeHtml(bucket.items[0].str)}</span>
+          <span style="width: 25%; color: #555555;">${escapeHtml(bucket.items[1].str)}</span>
+          <span style="width: 25%; color: ${bucket.items[2].color || "#222222"}; font-weight: 600;">${escapeHtml(bucket.items[2].str)}</span>
+          <span style="width: 25%; text-align: right; color: #555555;">${escapeHtml(bucket.items[3].str)}</span>
+        </div>
+      `);
+      continue;
+    }
+
+    // Subtitle / Job role / School name line
+    const isSub =
+      fullLineStr.includes("Developer") ||
+      fullLineStr.includes("stack") ||
+      fullLineStr.includes("School") ||
+      fullLineStr.includes("DiCoding") ||
+      fullLineStr.includes("Universitas");
+
+    if (isSub) {
+      output.push(`
+        <div style="font-size: 12.5px; color: #444444; font-weight: 500; margin-bottom: 4px;">
+          ${escapeHtml(fullLineStr)}
+        </div>
+      `);
+    } else {
+      output.push(`
+        <p style="margin: 4px 0 8px 0; font-size: 12px; line-height: 1.55; color: ${first.color || "#333333"};">
+          ${escapeHtml(fullLineStr)}
+        </p>
+      `);
+    }
+  }
 }
 
 export async function parseUploadedFile(file: File): Promise<LoadedDocument> {

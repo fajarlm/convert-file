@@ -123,13 +123,13 @@ export function smartFormatLocal(
   // Render Header section with photo if available
   if (profileImg) {
     html.push(`
-      <div class="doc-header-profile" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 24px; border-bottom: 2px solid #e5e7eb; padding-bottom: 16px;">
+      <div class="doc-header-profile" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 24px; border-bottom: 2px solid #222222; padding-bottom: 16px;">
         <div style="flex: 1;">
           <h1 style="font-size: 26px; font-weight: 800; color: #111827; margin: 0 0 6px 0; letter-spacing: -0.5px; line-height: 1.2;">${titleText}</h1>
           ${contactHtml ? `<div style="font-size: 13px; color: #4b5563; line-height: 1.5; margin-top: 8px;">${contactHtml}</div>` : ""}
         </div>
         <div style="flex-shrink: 0;">
-          <img src="${profileImg.dataUrl}" alt="Foto Profil / Logo" style="max-width: 140px; max-height: 140px; width: auto; height: auto; object-fit: contain; border-radius: 8px; border: 2px solid #e5e7eb; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: block;" />
+          <img class="resizable-doc-img" src="${profileImg.dataUrl}" alt="Foto Profil / Logo" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1.5px solid #e5e7eb; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: block; cursor: pointer;" />
         </div>
       </div>
     `);
@@ -139,7 +139,7 @@ export function smartFormatLocal(
     );
     if (contactHtml) {
       html.push(
-        `<div style="font-size: 13px; color: #4b5563; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb; line-height: 1.5;">${contactHtml}</div>`
+        `<div style="font-size: 13px; color: #4b5563; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 2px solid #222222; line-height: 1.5;">${contactHtml}</div>`
       );
     }
   }
@@ -156,7 +156,7 @@ export function smartFormatLocal(
       }
       const headingText = escapeHtml(line);
       html.push(
-        `<h2 style="font-size: 15px; font-weight: 700; text-transform: uppercase; color: #1e40af; border-bottom: 1.5px solid #bfdbfe; padding-bottom: 5px; margin-top: 24px; margin-bottom: 10px; letter-spacing: 0.5px;">${headingText}</h2>`
+        `<h2 style="font-size: 14px; font-weight: 800; text-transform: uppercase; color: #111827; border-bottom: 1.5px solid #222222; padding-bottom: 4px; margin-top: 24px; margin-bottom: 12px; letter-spacing: 0.8px;">${headingText}</h2>`
       );
       continue;
     }
@@ -201,7 +201,7 @@ export function smartFormatLocal(
   for (const bImg of bodyImgs) {
     html.push(`
       <div class="doc-body-image" style="text-align: center; margin: 20px 0;">
-        <img src="${bImg.dataUrl}" alt="Gambar Dokumen" style="max-width: 100%; max-height: 360px; object-fit: contain; border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); display: inline-block;" />
+        <img class="resizable-doc-img" src="${bImg.dataUrl}" alt="Gambar Dokumen" style="max-width: 100%; max-height: 360px; object-fit: contain; border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); display: inline-block; cursor: pointer;" />
       </div>
     `);
   }
