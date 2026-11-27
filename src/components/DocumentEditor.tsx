@@ -583,7 +583,9 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
           <style>
             body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 40px; color: #000; margin: 0; }
             table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+            table.pdf-contact-row { border: none !important; width: auto !important; margin: 0 0 3px 0 !important; }
             th, td { border: 1px solid #333; padding: 8px 12px; }
+            td.pdf-contact-cell { border: none !important; padding: 0 !important; }
             th { background: #f4f4f5; font-weight: bold; }
             img { max-width: 100%; height: auto; }
             @page { margin: 15mm; }
@@ -2017,7 +2019,7 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
           onKeyUp={handleMouseUp}
           className={`min-h-[500px] w-full max-w-5xl mx-auto focus:outline-hidden text-sm sm:text-base leading-relaxed ${
             theme === "retro" ? "text-black" : ""
-          } [&_table]:border-collapse [&_table]:w-full [&_table]:my-4 [&_table]:border [&_table]:border-current/30 [&_th]:border [&_th]:border-current/30 [&_th]:p-2.5 [&_th]:font-bold [&_th]:bg-current/5 [&_td]:border [&_td]:border-current/30 [&_td]:p-2.5 [&_h1]:text-2xl [&_h1]:font-extrabold [&_h1]:my-4 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:my-3 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:my-2 [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline [&_img]:max-w-full [&_img]:h-auto [&_img]:inline-block`}
+          } [&_table]:border-collapse [&_table]:w-full [&_table]:my-4 [&_table]:border [&_table]:border-current/30 [&_table.pdf-contact-row]:w-auto [&_table.pdf-contact-row]:border-none [&_table.pdf-contact-row]:my-0.5 [&_th]:border [&_th]:border-current/30 [&_th]:p-2.5 [&_th]:font-bold [&_th]:bg-current/5 [&_td]:border [&_td]:border-current/30 [&_td]:p-2.5 [&_td.pdf-contact-cell]:border-none [&_td.pdf-contact-cell]:p-0 [&_h1]:text-2xl [&_h1]:font-extrabold [&_h1]:my-4 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:my-3 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:my-2 [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-2 [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline [&_img]:max-w-full [&_img]:h-auto [&_img]:inline-block`}
         />
       </div>
 
