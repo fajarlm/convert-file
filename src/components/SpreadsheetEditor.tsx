@@ -10,13 +10,16 @@ import {
   Table as TableIcon,
   Columns3,
 } from "lucide-react";
-import { LANGUAGE_OPTIONS } from "@/lib/types";
+import { LANGUAGE_OPTIONS, CellStyleInfo, SheetMergeRange } from "@/lib/types";
 import { useAppTheme } from "@/context/ThemeContext";
 import { translateText, translateBatch } from "@/lib/translator";
 
 interface SpreadsheetEditorProps {
   data: (string | number)[][];
   images?: string[];
+  sheetStyles?: Record<string, CellStyleInfo>;
+  sheetMerges?: SheetMergeRange[];
+  sheetColWidths?: number[];
   onChange: (newData: (string | number)[][]) => void;
   onFullTranslate: (targetLang: string) => Promise<void>;
   isTranslatingFull: boolean;
@@ -25,6 +28,9 @@ interface SpreadsheetEditorProps {
 export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
   data,
   images,
+  sheetStyles,
+  sheetMerges,
+  sheetColWidths,
   onChange,
   onFullTranslate,
   isTranslatingFull,
@@ -271,54 +277,131 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
       )}
 
       {/* Grid Canvas Table */}
-      <div className={`flex-1 overflow-auto max-h-[580px] ${theme === "retro" ? "bg-white text-black" : ""}`}>
-        <table className="w-full border-collapse text-xs font-mono">
-          <thead className="sticky top-0 z-10 border-b border-current/20 bg-black/5 dark:bg-white/5">
-            <tr>
-              <th className="w-12 border-r border-current/20 px-2 py-2 text-center opacity-60">#</th>
-              {Array.from({ length: maxCols }).map((_, colIdx) => (
-                <th
-                  key={colIdx}
-                  className="min-w-[140px] border-r border-current/20 px-3 py-2 text-left font-bold opacity-80 uppercase"
-                >
-                  {getColLabel(colIdx)}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, rIdx) => (
-              <tr key={rIdx} className="hover:bg-current/5">
-                <td className="sticky left-0 border-r border-b border-current/15 bg-black/5 dark:bg-zinc-900 text-center opacity-60 py-1.5">
-                  {rIdx + 1}
-                </td>
-                {Array.from({ length: maxCols }).map((_, cIdx) => {
-                  const val = row[cIdx] ?? "";
-                  const isSelected = selectedCell?.r === rIdx && selectedCell?.c === cIdx;
-                  return (
-                    <td
-                      key={cIdx}
-                      onClick={() => setSelectedCell({ r: rIdx, c: cIdx })}
-                      className={`border-r border-b border-current/15 p-0 transition-colors ${
-                        isSelected
-                          ? "bg-cyan-500/20 ring-2 ring-cyan-400 ring-inset"
-                          : ""
+      {(() => {
+        const hasStyledCells = Boolean(sheetStyles && Object.keys(sheetStyles).length > 0);
+        const skipSet = new Set<string>();
+        const spanMap = new Map<string, { colSpan: number; rowSpan: number }>();
+
+        (sheetMerges || []).forEach((m) => {
+          const rowSpan = m.e.r - m.s.r + 1;
+          const colSpan = m.e.c - m.s.c + 1;
+          if (rowSpan > 1 || colSpan > 1) {
+            spanMap.set(`${m.s.r}:${m.s.c}`, { colSpan, rowSpan });
+            for (let r = m.s.r; r <= m.e.r; r++) {
+              for (let c = m.s.c; c <= m.e.c; c++) {
+                if (r !== m.s.r || c !== m.s.c) skipSet.add(`${r}:${c}`);
+              }
+            }
+          }
+        });
+
+        return (
+          <div
+            className={`flex-1 overflow-auto max-h-[580px] ${
+              hasStyledCells || theme === "retro" ? "bg-white text-black" : ""
+            }`}
+          >
+            <table className="w-full border-collapse text-xs font-mono">
+              <thead
+                className={`sticky top-0 z-10 border-b ${
+                  hasStyledCells
+                    ? "border-zinc-300 bg-zinc-100 text-zinc-700"
+                    : "border-current/20 bg-black/5 dark:bg-white/5"
+                }`}
+              >
+                <tr>
+                  <th
+                    className={`w-12 border-r px-2 py-2 text-center opacity-70 ${
+                      hasStyledCells ? "border-zinc-300" : "border-current/20"
+                    }`}
+                  >
+                    #
+                  </th>
+                  {Array.from({ length: maxCols }).map((_, colIdx) => (
+                    <th
+                      key={colIdx}
+                      style={{
+                        minWidth: sheetColWidths?.[colIdx] ? `${sheetColWidths[colIdx]}px` : "140px",
+                      }}
+                      className={`border-r px-3 py-2 text-left font-bold opacity-80 uppercase ${
+                        hasStyledCells ? "border-zinc-300" : "border-current/20"
                       }`}
                     >
-                      <input
-                        type="text"
-                        value={String(val)}
-                        onChange={(e) => handleCellChange(rIdx, cIdx, e.target.value)}
-                        className="w-full h-full px-3 py-2 bg-transparent border-none text-xs focus:outline-hidden font-sans"
-                      />
+                      {getColLabel(colIdx)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, rIdx) => (
+                  <tr key={rIdx} className={hasStyledCells ? "" : "hover:bg-current/5"}>
+                    <td
+                      className={`sticky left-0 border-r border-b text-center opacity-70 py-1.5 ${
+                        hasStyledCells
+                          ? "border-zinc-300 bg-zinc-100 text-zinc-700"
+                          : "border-current/15 bg-black/5 dark:bg-zinc-900"
+                      }`}
+                    >
+                      {rIdx + 1}
                     </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                    {Array.from({ length: maxCols }).map((_, cIdx) => {
+                      const key = `${rIdx}:${cIdx}`;
+                      if (skipSet.has(key)) return null;
+
+                      const span = spanMap.get(key);
+                      const cellStyle = sheetStyles?.[key];
+                      const val = row[cIdx] ?? "";
+                      const isSelected = selectedCell?.r === rIdx && selectedCell?.c === cIdx;
+
+                      const tdInline: React.CSSProperties = {
+                        backgroundColor: cellStyle?.backgroundColor,
+                        borderTop: cellStyle?.borderTop,
+                        borderRight: cellStyle?.borderRight,
+                        borderBottom: cellStyle?.borderBottom,
+                        borderLeft: cellStyle?.borderLeft,
+                        verticalAlign: cellStyle?.verticalAlign || "middle",
+                      };
+
+                      const inputInline: React.CSSProperties = {
+                        color: cellStyle?.color || (hasStyledCells ? "#111111" : undefined),
+                        fontWeight: cellStyle?.fontWeight,
+                        fontStyle: cellStyle?.fontStyle,
+                        textDecoration: cellStyle?.textDecoration,
+                        fontSize: cellStyle?.fontSize ? `${cellStyle.fontSize}px` : undefined,
+                        fontFamily: cellStyle?.fontFamily,
+                        textAlign: cellStyle?.textAlign || "left",
+                      };
+
+                      return (
+                        <td
+                          key={cIdx}
+                          colSpan={span?.colSpan}
+                          rowSpan={span?.rowSpan}
+                          onClick={() => setSelectedCell({ r: rIdx, c: cIdx })}
+                          style={tdInline}
+                          className={`p-0 transition-colors ${
+                            hasStyledCells ? "border-r border-b border-zinc-200" : "border-r border-b border-current/15"
+                          } ${
+                            isSelected ? "ring-2 ring-cyan-500 ring-inset" : ""
+                          }`}
+                        >
+                          <input
+                            type="text"
+                            value={String(val)}
+                            onChange={(e) => handleCellChange(rIdx, cIdx, e.target.value)}
+                            style={inputInline}
+                            className="w-full h-full px-3 py-2 bg-transparent border-none text-xs focus:outline-hidden font-sans"
+                          />
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
 
       {/* Grid Footer */}
       <div className="flex items-center justify-between border-t border-current/15 px-4 py-2 text-xs opacity-70">

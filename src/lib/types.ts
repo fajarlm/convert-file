@@ -10,6 +10,27 @@ export type SupportedFormat =
 
 export type EditorMode = "document" | "spreadsheet";
 
+export interface CellStyleInfo {
+  backgroundColor?: string;
+  color?: string;
+  fontWeight?: string;
+  fontStyle?: string;
+  textDecoration?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  textAlign?: "left" | "center" | "right";
+  verticalAlign?: "top" | "middle" | "bottom";
+  borderTop?: string;
+  borderRight?: string;
+  borderBottom?: string;
+  borderLeft?: string;
+}
+
+export interface SheetMergeRange {
+  s: { r: number; c: number };
+  e: { r: number; c: number };
+}
+
 export interface LoadedDocument {
   id: string;
   name: string;
@@ -23,6 +44,11 @@ export interface LoadedDocument {
   // For spreadsheet mode (2D array of rows/cells)
   sheetData: (string | number)[][];
   sheetName: string;
+  sheetStyles?: Record<string, CellStyleInfo>;
+  sheetMerges?: SheetMergeRange[];
+  sheetColWidths?: number[];
+  sheetRowHeights?: number[];
+  rawBuffer?: ArrayBuffer;
   // History
   history: string[];
   // Extracted embedded images (base64 data URLs)
